@@ -1,0 +1,64 @@
+Recently, LLMs have demonstrated impressive zero-shot capabilities in diverse code-related tasks
+including code generation and code summarization [Achiam et al. 2023; Guo et al. 2024; Luo
+et al. 2023; Nijkamp et al. 2022; Roziere et al. 2023]. Code generation refers to generating a code
+for a given natural language description. In recent years, LLMs designed for coding tasks, such
+as CodeGen [Nijkamp et al. 2022], Code Llama [Roziere et al. 2023] and DeepSeek-Coder [Guo
+et al. 2024], have achieved remarkable results in code generation. Code summarization refers to
+generating a summary in natural language for a given code. Many works [Geng et al. 2024; Sun
+et al. 2023] have demonstrated the effectiveness of LLMs in code summarization.
+In this work, we directly utilize LLMs’ zero-shot capabilities to generate code and comments for
+cross-domain code search. The methods mentioned above can potentially be used in our approach.
+3 Empirical Study Setup
+We conduct an empirical study to investigate the feasibility of leveraging query-comment matching
+and code-code matching to mitigate domain gaps. In this section, we will introduce the experimental
+setup of our empirical study.
+3.1 Dataset
+This work focuses on cross-domain code search scenarios. Thus, we use the Solidity dataset [Chai
+et al. 2022], which is commonly employed as a benchmark for the cross-domain code search
+task [Chai et al. 2022; Fan et al. 2024]. Solidity is a language designed for smart contracts [Wohrer
+and Zdun 2018] and is not included in the pre-trained data of the PLMs we use. We follow the data
+split of prior work [Chai et al. 2022], where the training, validation, and test sets consist of 56,976,
+4,096, and 1,000 samples, respectively. We exclusively use the test set from the Solidity dataset,
+which consists of 1,000 test queries and their corresponding 1,000 Solidity functions.
+3.2 Research Questions
+Our study is structured around the following research questions (RQs):
+RQ1: How effective is query-comment matching compared to query-code matching?
+Our objective is to investigate the effectiveness of query-comment matching and the relationship
+between query-comment matching and query-code matching. To answer RQ1, we first compare the
+performance of query-comment matching with query-code matching. For the query-code matching
+schema, we calculate the similarity between the query and the code and then order the code based
+on the similarity scores. For the query-comment matching schema, since the original comments of
+code are used as queries, we first use zero-shot prompting to guide LLMs in generating a comment
+for each code. Then we order the code based on similarity scores between the query and comments
+related to the code. We then identify the differences between the retrieval results obtained from
+these two search methods to determine if they complement each other. Finally, we analyze the
+specific scenarios in which the query-comment matching method performs better.
+RQ2: How effective is code-code matching compared to query-code matching? Similar to
+RQ1, we first compare the performance of code-code matching with query-code matching. For the
+query-code matching schema, the retrieval process is identical to that described in RQ1. For the
+code-code matching schema, because there are no code snippets labeled as matching the test queries
+in either the training set or validation set, we also leverage LLMs to generate a code snippet for
+each query. During the retrieval process, we rank the code based on the similarity scores between
+the code and the generated code. We then also analyze the differences between the retrieval results
+from the two search methods and the specific scenarios where code-code matching performs better.
+RQ3: Can the three matching schemas complement each other? Considering the comple-
+mentarity between the query-code and query-comment schemas, as well as between the query-code
+and code-code schemas, we would like to investigate whether these three schemas can complement
+each another, and how their relationships can be leveraged for zero-shot code search. To address
+this RQ, We further analyze the retrieval results from the three matching schemas and the outcome
+of integrating these three schemas.
+3.3 Evaluation Metrics
+We follow previous studies [Chai et al. 2022; Cheng and Kuang 2022; Fan et al. 2024] and utilize two
+widely adopted metrics, MRR (Mean Reciprocal Rank) and top-𝑘 accuracy (𝑘= 1, 5, 10), to evaluate
+the performance of code search approaches. MRR is the average of the reciprocal ranks of correct
+answers for a set of queries. Top-𝑘 accuracy is the proportion of queries for which relevant code
+can be found among the top 𝑘 results.
+3.4 Implementation Details
+As UniXcoder [Guo et al. 2022] has achieved remarkable results and is widely used as a backbone
+model in code search [Shi et al. 2023a; Wang et al. 2023a,b], we utilize UniXcoder as the retriever to
+perform zero-shot code search. Following previous studies [Fan et al. 2024; Feng et al. 2020; Wang
+et al. 2023c], we set the maximum sequence length of the retriever’s input to 256 for programming
+language (PL) and 128 for natural language (NL), respectively. Considering both effectiveness and
+efficiency, we utilize DeepSeek-Coder-1.3B-Instruct for zero-shot code and comment generation due
+to its impressive performance and the relatively small number of parameters. We set the maximum
+generation length of the LLM to 256 for PL and 128 for NL.

@@ -1,0 +1,112 @@
+In this section, we conduct a comparative analysis of the
+distinct features of machine- and human-authored code.
+A. Study Design
+To gain insights into distinctions between human and
+machine programmers, we consider three primary aspects that
+are relevant to coding styles, namely diversity, conciseness, and
+naturalness [25], [26], [27], [28], [29], which can be measured
+by specific metrics.
+1) Lexical Diversity: Lexical diversity indicates the richness
+and variety of vocabulary present in a corpus. In the context
+of programming, this refers to the diversity in variable names,
+functions, classes, and reserved words. Analyzing lexical
+diversity offers a deeper understanding of the creativity,
+expressiveness, and potential complexity of code segments.
+There are four important empirical metrics in both natural and
+programming languages revealing the lexical diversity: token
+frequency, syntax element distribution, Zipf’s law [30] and
+Heaps’ law [31].
+Token Frequency stands for the occurrence of distinct tokens
+in the code corpus. The attribute indicates the core vocabulary
+utilized by human and machine programmers, shedding light
+on their coding preferences and tendencies.
+Syntax Element Distribution refers to the proportion of
+syntax elements (e.g., keywords, identifiers) in the code corpus.
+Understanding the distribution of syntax elements in code
+is akin to dissecting the anatomy of a language. It gives us
+a lens to view the nuances of coding style, the emphasis
+on structure, and the intricacies that distinguish human- and
+machine-authored code.
+To delve into the syntax element distribution, we analyze
+code with tree-sitter2 and classify tokens into distinct categories,
+as detailed in Table I. We then compute the proportion of each
+category in the code corpus.
+Zipf’s and Heaps’ Laws were initially identified in natural
+languages [30], [31], and later verified in the scope of
+programming languages [25], [26]. Zipf’s law states that the
+frequency value f of a token is inversely proportional to its
+frequency rank r: f ∝ 1
+rα , where α is close to 1 [30]. In
+programming languages, it states that a few variable names or
+functions are very commonly used across different scripts, while
+many others are rarely employed. Heaps’ Law characterizes the
+expansion of a vocabulary V as a corpus D increases in size:
+V ∝Dβ, where β ∈(0, 1) captures the rate of vocabulary
+growth relative to the size of the corpus.
+We investigate how closely machine-authored code aligns
+with Zipf’s and Heaps’ laws compared to human-authored
+code, which could reflect the models’ ability to mimic human’s
+lexical usage.
+2) Conciseness: Conciseness stands as a cornerstone at-
+tribute when characterizing code [32], [28], [29]. The intricate
+balance of code conciseness directly influences readability,
+maintainability, and even computational efficiency. We investi-
+gate two metrics that characterize code conciseness, namely,
+the number of tokens and the number of lines.
+Number of tokens gives us an indication of verbosity and
+complexity, showing the detailed composition of the code [32].
+Number of lines helps us understand organizational choices,
+as spreading code across more lines can reflect a focus on
+readability and structure [29].
+3) Naturalness: The concept of code naturalness suggests
+that programming languages share a similar degree of regularity
+and predictability with natural languages [27]. This idea has
+been operationalized by employing language models to assess
+the probability of a specific token’s occurrence within a given
+context. Under this framework, we inspect how “natural”
+machine-generated code is compared to human-written code.
+Token Likelihood and Rank are two metrics that measure
+the naturalness of each token in the studied code corpus. The
+token likelihood stands for the probability pof a token xunder
+the model pθ, denoted as pθ(x). The rank of a token x is the
+position of x in the sorted list of all tokens based on their
+likelihoods, denoted as rθ(x). Both metrics evaluate how likely
+a token is preferred by the model [33], [34], [35]. We calculate
+log scores on each token and then take the average to represent
+the whole code snippet as advised in [34]. To pinpoint the code
+elements that most significantly affect the score discrepancies,
+we also present the mean scores on different syntax element
+categories in Table I for comparison.
+B. Experimental Setup
+We choose the state-of-the-art CodeLlama model [6] to
+generate code. Limited by our computational resources, we
+use the version with 7B parameters. As for the decoding
+strategies, we adopt the top-p sampling method [36] with
+p=0.95 following [1]. The temperature T is an important
+parameter controlling the diversity of the generated code [36].
+Since current LLMs on code are usually evaluated across
+different decoding temperatures [5], [37], [1], [6], we generate
+code with T = 0.2 and T = 1.0 to capture the model’s behavior
+under different settings. The maximum length of the generated
+code is set to 512 tokens based on the memory constraints and
+the length distribution of human-written code. All experiments
+are conducted on 2 NVIDIA RTX 4090 GPUs with 24GB
+memory.
+C. Dataset Preparation
+To compare with human-authored code, we extract 10,000
+Python functions randomly from the CodeSearchNet cor-
+pus [16], which is curated from a wide range of open-source
+GitHub projects. We use the function signatures and their
+accompanying comments as prompts for the model as in [1].
+We also collect the corresponding bodies of these functions to
+represent human-written code.
+While acknowledging that current models, including CodeL-
+lama and even ChatGPT [38], may not yet craft code of
+unparalleled quality for intricate tasks such as those in Code-
+SearchNet [39], [38], the choice of this dataset is deliberate and
+insightful. Challenging the models against various real-world
+project code rather than simple programming problems, akin
+to those in the HumanEval [1] or MBPP [40] dataset, offers
+a more representative assessment. It allows us to analyze the
+differences between human- and machine-authored code when
+faced with broader, practical applications.

@@ -1,0 +1,189 @@
+To improve the inference efficiency of LLMs on code
+generation tasks, we propose FASTCODER, an LLM inference
+acceleration approach tailored to the characteristics of code
+generation. The architecture of FASTCODER is shown in
+Fig. 4. FASTCODER constructs a multi-source datastore com-
+bining general and repository-specific knowledge to improve
+draft quality. It then reduces retrieval overhead by controlling
+timing, boosts efficiency via parallel retrieval and a context and
+LLM preference-aware cache. Finally, it uses tree attention to
+avoid redundant computation.
+A. Multi-source Datastore Construction
+The quality of the retrieval datastore, which serves as the
+source of draft sequences, critically determines the accelera-
+tion potential. A larger datastore may enhance the probability
+of result acceptance, but it also correspondingly increases
+retrieval time, making the trade-off between the two critically
+important. To achieve optimal performance with a compact
+datastore and facilitate effective retrieval, FASTCODER in-
+corporates a smaller repository-related datastore Dr and a
+larger common code datastore Dc to construct a compre-
+hensive retrieval datastore D. This design supports parallel
+retrieval, providing access to both general and project-specific
+knowledge. To enable fast retrieval with minimal overhead,
+we organize the datastore into context-continuation pairs,
+facilitating a rapid exact-match method for context search.
+Repository-related datastore Dr . During software devel-
+opment, developers often reference cross-file elements such as
+classes and methods, making intra-repository files highly rel-
+evant to the generated code. Additionally, repository-specific
+factors, including domain variations and coding conventions,
+lead to distinct patterns of idiomatic expressions. For in-
+stance, web development repositories frequently involve HTTP
+request-response handling, while data science repositories fo-
+cus on data processing and modeling tasks. To this end, we
+collect the code files from current repository (with the portions
+to be generated excluded to avoid data leakage) and form
+repository-related datastore Dr.
+Common datastore Dc. To ensure that common program-
+ming operations are also retrievable, a subset of data from
+commonly used pre-trained code datasets [34] is used to form
+Dc, which serves as another component of datastore D.
+Datastore organization. For efficient retrieval, the datastore
+is organized as contexts and the corresponding continuations
+following [16]. Specifically, for each code file utilized in
+constructing the datastore, the content preceding every position
+will constitute a context, whereas the content subsequent to
+that position is the corresponding continuation. The datastore
+D of FASTCODER can be summarized as:
+responding continuation of ci (cj ), |Dr |(|Dc|) is the number
+selection
+of samples in Dr (Dc). Specifically, Dr can be omitted in
+𝑠 ends with 𝑡𝑜𝑘𝑒𝑛𝑠𝑘𝑖𝑝 ?
+no
+standalone code generation where such context is unreachable.
+yes
+yes with probability 1 − 𝑝
+B. Context- and LLM Preference-aware Caching
+no
+with probability 𝑝
+end retrieval
+To reduce retrieval costs and improve the alignment of
+cache is available
+retrieved results with context and LLM preferences—thereby
+Retriever Cache
+cache is not
+increasing both the accepted sequence length and inference
+no results
+available
+speed—we design a context- and LLM preference-aware
+caching strategy to cache the verified retrieved sequences and
+LLM-generated sequences.
+parallel
+𝐷𝑟
+𝑅𝑟
+search 𝑹
+Based on the observations in Section III-B that program en-
+𝐷c
+𝑅𝑐
+retrieved sequence
+tities (token sequences) defined or used in preceding snippets
+Datastore
+are often reused in the subsequent code snippets, we design
+the CACHE mechanism from two perspectives. On the one
+hand, although datastore D contains vast content, typically
+only a small portion is highly relevant to the code currently
+being generated. In contrast, the validated retrieval tokens are
+exactly the sequences that exhibit high relevance to the current
+generation code, and are thus more likely to be retrieved again
+in subsequent stages than other content within the datastore D.
+Consequently, if the draft sequence r= (y1,...,yj ), retrieved
+by the context s= (x1,...,xt), is verified by the LLM, we con-
+catenate them as (x1,...,xt,y1,...,yj ) and add it into CACHE.
+On the other hand, since the datastore Dis static, as it remains
+unmodified after construction, the draft sequences retrieved
+for the identical context s also remain consistent. However,
+different LLMs exhibit distinct generation preferences, which
+is reflected in the fact that they may generate different outputs
+given the same input. As a result, a static datastore struggles to
+accommodate the diverse preferences of various LLMs. Earlier
+decoding outputs can to some extent reflect LLM-specific
+tendencies and ensure contextual coherence. Therefore, we
+also incorporate the verified decoding output sequence into
+CACHE for future use.
+To maintain the CACHE, we assess whether the two afore-
+mentioned update conditions are satisfied after each forward
+step of the LLM. If the number of sequences inside the CACHE
+exceeds the pre-defined threshold l, it is accessible and will
+remain active throughout the entire inference process.
+C. Dynamic and Efficient Retrieval Strategy
+Algorithm 1 illustrates the complete retrieval process of
+FASTCODER. Before each forward step, given current context
+s, FASTCODER initially verifies the availability of CACHE.
+If the CACHE is accessible, that is, the number of sequences
+inside exceeds l, retrieval is prioritized from CACHE. If
+CACHE is unavailable or fails to yield valid (non-empty)
+results, FASTCODER utilizes a dynamic and efficient retrieval
+strategy to minimize unnecessary retrieval cost. Specifically,
+FASTCODER optimizes retrieval timing by addressing two key
+considerations as follows.
+Skip token. As mentioned in Section III-B, the intrinsic
+characteristics of code lead to a low retrieval success rate at
+the first non-whitespace character of each line. Since obvious
+patterns are not found in other positions, and the introduction
+of intricate judgment processes may incur additional compu-
+tational overhead, we set the first non-whitespace character of
+each line as the skip token. We strategically reduce the retrieval
+probability of skip tokens through a control parameter p, which
+refers to the retrieval probability at these positions.
+Missing table. When utilizing the current context s to
+retrieve its continuations from datastore D, it may fail to
+yield any valid results in some cases. To prevent time wastage
+resulting from invalid retrieval, we maintain a missing table
+M= {smi } that stores suffixes smi for which no valid
+results can be retrieved from the datastore D. Thus, when
+smi is encountered again during the subsequent inference,
+FASTCODER will bypass the retrieval and directly utilize the
+LLM to generate the next token.
+If FASTCODER decides to proceed with retrieval according
+to the above strategy, parallel retrieval is conducted from Dr
+and Dc to further boost the retrieval efficiency, and the results
+refer to Rr and Rc, separately. Specifically, if Rr and Rc
+are both empty, s will be denoted as sm and added into the
+missing table M. Otherwise, relevant sequences are employed
+to update the CACHE.
+D. Draft Construction and Verification with Weighted Prefix
+Optimization
+The retrieval results R= (Rr ,Rc) contain potential contin-
+uations of the current context s, often sharing the same prefix.
+To reduce the cost brought by verification each ri ∈R one
+by one, we construct the draft sequences using a Trie, where
+the unique path from a node to the root node corresponds to
+a prefix of the retrieval results, aiming to reduce the repeated
+verification of shared prefixes in R. We use following equation
+to assign a weight for each node:
+Nweight= α·tr + β·tc (3)
+where tr and tc represents the times that the node occurs in Rr
+and Rc respectively, and α and β refers to the corresponding
+coefficient. We retain αand βas tunable parameters to accom-
+modate diverse scenarios. For instance, in highly specialized
+code generation tasks, increasing the α/β value can help
+generate draft sequences that better align with repository-
+specific characteristics. We select top-k weighted sequences
+from the Trie as the draft sequences.
+As many draft sequences may share common prefixes,
+to avoid redundant computation of Transformer layers, we
+employ tree attention [15, 35] to verify the draft sequences. We
+represent the tree formed by the draft sequences, which is part
+of the Trie, as T = (V,E), where V is the set of all generated
+tokens and E is the set of edges representing token transitions
+in the candidates. The total number of nodes is N= |V|. In
+tree attention, only a token’s predecessors are considered as
+historical context, and the attention mask restricts attention to
+these predecessors. Let A ∈{0,1}N ×N be the attention mask
+matrix, where Aij = 1 indicates that token i can attend to
+token j. To reflect the tree structure, we define:
+Aij=
+1, if token j is a predecessor of token i in T
+0, otherwise
+(4)
+This ensures that each token can only attend to its own con-
+tinuation path, and tokens from different candidate branches
+are isolated in the attention computation.
+By applying tree attention mask and appropriately adjusting
+the positional indices for encoding, we are able to process mul-
+tiple candidates simultaneously without increasing the batch
+size. As our objective is to accelerate the inference without
+compromising model performance, all correct tokens from the
+beginning will be accepted, while the draft tokens following
+the first error will be rejected.

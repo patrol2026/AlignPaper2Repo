@@ -1,0 +1,124 @@
+github-repo,filepath,repopath,data,Original Result,Filename
+https://github.com/shuo-young/Hyperion,"hyperion
+/2408.06037v1.pdf",hyperion,Fine me the code where it merges front end and back end data,"[101,115]",exp_utils/exp_evaluation.py
+https://github.com/shuo-young/Hyperion,"hyperion
+/2408.06037v1.pdf",hyperion,find me the code where it trains and fine tunes a large language model,"[1,258]",HyperText/llama_recipes/finetuning.py
+https://github.com/shuo-young/Hyperion,"hyperion
+/2408.06037v1.pdf",hyperion,fine me the code where it defines seven inconsistencies between front end and back end,"[45,55]",exp_utils/exp_evaluation.py
+https://github.com/shuo-young/Hyperion,"hyperion
+/2408.06037v1.pdf",hyperion,find me the code where it preprocesses dataset to concatenate them,"[1,65]",HyperText/llama-recipes-09-11/ft_datasets/utils.py
+https://github.com/shuo-young/Hyperion,"hyperion
+/2408.06037v1.pdf",hyperion,find me the code where loads some saftey models to check safety,"[42,47]",HyperText/llama-recipes-09-11/inference/safety_utils.py
+https://github.com/aaron-imani/omega,omega/omega_paper.pdf,omega,Find me how does it get the commit context using the url,"[255,269]",CMG/omega.py
+https://github.com/aaron-imani/omega,omega/omega_paper.pdf,omega,Fine me the code where it counts collected issues and prs,"[34,35]",CMG/cache_issues_prs.py
+https://github.com/aaron-imani/omega,omega/omega_paper.pdf,omega,find me the code where it defines quantization for models,"[15,15]",quantization/quantize.py
+https://github.com/aaron-imani/omega,omega/omega_paper.pdf,omega,find me the code where it extracts the commit using github url,"[46,62]",CMG/utils.py
+https://github.com/aaron-imani/omega,omega/omega_paper.pdf,omega,Find me the code where it constructs the after summary of a commit,"[222,239]",CMG/multi_intent_method_summarization.py
+https://github.com/aaron-imani/omega,omega/omega_paper.pdf,omega,fine me the code where it defines zero shot prompt,"[24,31]",CMG/class_summarization/class_summarizer.py
+https://github.com/aaron-imani/omega,omega/omega_paper.pdf,omega,fine me the code where it gets the pull request content based on using github url,"[51,71]",CMG/crawl_pr_issue.py
+https://github.com/aaron-imani/omega,omega/omega_paper.pdf,omega,"fine me the code where it is implemented-""Specifically, for a
+modified method, we first generated the pre-commit multiintent summaries"" ","[1,141]",CMG/CMMS/summarize.py
+https://github.com/aaron-imani/omega,omega/omega_paper.pdf,omega,where did the java projects download,"[1,21]",CMG/download_projects.py
+https://github.com/shiyusunse/SOUND,omega/sound_paper.pdf,sound,where does it calculate file level result,"[101,116]",src/models/base_model.py
+https://github.com/shiyusunse/SOUND,omega/sound_paper.pdf,sound,find me the code where it ranks analysis from file and line level,"[228,249]",src/models/base_model.py
+https://github.com/shiyusunse/SOUND,omega/sound_paper.pdf,sound,find me the code where it runs analysis to answer RQ1,"[35,45]",src/main.py
+https://github.com/shiyusunse/SOUND,omega/sound_paper.pdf,sound,where does it select the top 100 releases,"[33,108]",src/select_top.py
+https://github.com/shiyusunse/SOUND,omega/sound_paper.pdf,sound,fine me the code where it calculates recall for buggy lines',"[251,319]",src/models/base_model.py
+https://github.com/shiyusunse/SOUND,omega/sound_paper.pdf,sound,find me the code where it reads the dataset line by line and file by file,"[23,74]",src/utils/helper.py
+https://github.com/asgaardlab/hf-question-answer,ICSE_2025_Toma.pdf,hf-question-answer-main,where does it calculate cohen's kapps between two authors,"[1,25]",data_analyzer/irr_calculator.py
+https://github.com/asgaardlab/hf-question-answer,ICSE_2025_Toma.pdf,hf-question-answer-main,where does it rank model based on likes,"[8,21]",data_analyzer/model_properties_analyzer.py
+https://github.com/asgaardlab/hf-question-answer,ICSE_2025_Toma.pdf,hf-question-answer-main,where does it calculate percentile for discussion length?,"[17,25]",data_analyzer/discussion_length_visualizer.py
+https://github.com/asgaardlab/hf-question-answer,ICSE_2025_Toma.pdf,hf-question-answer-main,where does it implement finding random discussion length removing urls and hyperlinks,"[10,35]",data_cleaner/discussion_length_calculator.py
+https://github.com/asgaardlab/hf-question-answer,ICSE_2025_Toma.pdf,hf-question-answer-main,find me the code where it downloads discussions for models,"[17,39]",data_collector/model_discussion_collector.py
+https://github.com/asgaardlab/hf-question-answer,ICSE_2025_Toma.pdf,hf-question-answer-main,find me the code where it downloads all models from hugging face,"[16,33]",data_collector/models_lister.py
+https://github.com/asgaardlab/hf-question-answer,ICSE_2025_Toma.pdf,hf-question-answer-main,find me the code where it classify discussions using open ai key,"[43,67]",discussion_classifier/gpt_classifier.py
+https://github.com/asgaardlab/hf-question-answer,ICSE_2025_Toma.pdf,hf-question-answer-main,where does it implement identifying hidden discussions ,"[13,18]",data_cleaner/hidden_body_identifier.py
+https://github.com/asgaardlab/hf-question-answer,ICSE_2025_Toma.pdf,hf-question-answer-main,where does it clean all discussions and save them,"[40,44]",data_cleaner/discussion_reader.py
+https://github.com/aiopsplus/C4RLLaMA,idllm.pdf,C4RLLaMA,find the loss function used in this study,"[55,82]",utils/BalanceTrainer.py
+https://github.com/aiopsplus/C4RLLaMA,idllm.pdf,C4RLLaMA,where does it declare the smoothing loss function,"[29,29]",utils/BalanceTrainer.py
+https://github.com/aiopsplus/C4RLLaMA,idllm.pdf,C4RLLaMA,find the zero shot prompting strategy in the codbase,"[23,41]",utils/prompter.py
+https://github.com/aiopsplus/C4RLLaMA,idllm.pdf,C4RLLaMA,find where it calculates precision,"[18,18]",test.py
+https://github.com/aiopsplus/C4RLLaMA,idllm.pdf,C4RLLaMA,find the base model this codebase uses,"[47,47]",test.py
+https://github.com/aiopsplus/C4RLLaMA,idllm.pdf,C4RLLaMA,find the code fragment where it produces results,"[132,140]",test.py
+https://github.com/aiopsplus/C4RLLaMA,idllm.pdf,C4RLLaMA,find the code where it loads the pretrained model,"[95,99]",train.py
+https://github.com/aiopsplus/C4RLLaMA,idllm.pdf,C4RLLaMA,find the tokenize function,"[114,132]",train.py
+https://github.com/aiopsplus/C4RLLaMA,idllm.pdf,C4RLLaMA,find the configuration for low rank adaptation,"[174,181]",train.py
+https://github.com/aiopsplus/C4RLLaMA,idllm.pdf,C4RLLaMA,what optimizer and scheduler did it use? find the relevant code fragment,"[227,242]",train.py
+https://github.com/mooselab/Discover-Data-Quality-With-RIOLU,2412.05240v1.pdf,riolu,which scripts regenerate profiling/anomaly metrics and log the reported precision/recall/F1 per dataset?,"[1,123]",test_profiling.py
+https://github.com/mooselab/Discover-Data-Quality-With-RIOLU,2412.05240v1.pdf,riolu,where does it use the code for  2 means clustering techniques described in the paper,"[1,37]",pattern_selector.py
+https://github.com/mooselab/Discover-Data-Quality-With-RIOLU,2412.05240v1.pdf,riolu,Does it check whether data is cleaned or not? if yes find me the relevant code where it is implemented?,"[44,56]",Guided-RIOLU.py
+https://github.com/mooselab/Discover-Data-Quality-With-RIOLU,2412.05240v1.pdf,riolu,how can i estimate the coverage given a threshold for AUTO RIOLU?,"[16,34]",Auto_RIOLU_alt_nsubset.py
+https://github.com/mooselab/Discover-Data-Quality-With-RIOLU,2412.05240v1.pdf,riolu,where to get the results of supervised version of rolu?,"[1,86]",Guided-RIOLU.py
+https://github.com/mooselab/Discover-Data-Quality-With-RIOLU,2412.05240v1.pdf,riolu,where to find the actual coverage of the pattern,"[1,265]",pattern_generator.py
+https://github.com/YerbaPage/DetectCodeGPT,2401.06461v5.pdf,DetectCodeGPT-main,How do I run DetectCodeGPT end-to-end on my own code files?,"[1,115]",README.md
+https://github.com/YerbaPage/DetectCodeGPT,2401.06461v5.pdf,DetectCodeGPT-main,What default hyperparameters should I use for perturbations,"[65,112]",analyze_proportion.py
+https://github.com/YerbaPage/DetectCodeGPT,2401.06461v5.pdf,DetectCodeGPT-main,where does it generate code using hugging face code parrot models ?,"[174,266]",code-generation/generate.py
+https://github.com/YerbaPage/DetectCodeGPT,2401.06461v5.pdf,DetectCodeGPT-main,how the codebase implement the naturalness distribution part? find me the relevant code part,"[371,440]",analyze_naturalness.py
+https://github.com/YerbaPage/DetectCodeGPT,2401.06461v5.pdf,DetectCodeGPT-main,how does the paper mention finding tagging tokens and aligning the token with categories,"[264,289]",token_tagging.py
+https://github.com/jiangsha97/DESEC,2410.08858v2.pdf,DESEC-main,where does it train linear discrimant analysis model find me the relevant code part,"[1,34]",LDA_Model_Training.py
+https://github.com/jiangsha97/DESEC,2410.08858v2.pdf,DESEC-main,where does it calculate shannon entropy for evaluating secrets?,"[44,57]",Plausible_Secrets.py
+https://github.com/jiangsha97/DESEC,2410.08858v2.pdf,DESEC-main,beam search for decoding?,"[24,111]",DESEC_BeamSearch.py
+https://github.com/jiangsha97/DESEC,2410.08858v2.pdf,DESEC-main,average entropy calculation?,"[74,89]",Scoring_With_IDA_Model.py
+https://github.com/jiangsha97/DESEC,2410.08858v2.pdf,DESEC-main,how does it crawl secrets from github?,"[1,139]",Real_Secrets_git.py
+https://github.com/jiangsha97/DESEC,2410.08858v2.pdf,DESEC-main,it has mentioned user can compare DESEC with chosen LLM? where is the relevant part?,"[1,80]",DESEC_TestWithCodeLLM.py
+https://github.com/Pro-Alert/ProAlert,fse2025/3729367.pdf,fse2025/ProAlert-main,where does it insert relations for graph nodes mentioned in the paper?,"[29,45]",pro_alert/topo_read/topo_read.py
+https://github.com/Pro-Alert/ProAlert,fse2025/3729367.pdf,fse2025/ProAlert-main,where does it preprocess and prepare its data?,"[147,197]",summarize.py
+https://github.com/Pro-Alert/ProAlert,fse2025/3729367.pdf,fse2025/ProAlert-main,how does it read the topology? which graph algorithms does it use?,"[202,279]",pro_alert/topo_read/topo_read.py
+https://github.com/Pro-Alert/ProAlert,fse2025/3729367.pdf,fse2025/ProAlert-main,how does it cluster the anomalies found?,"[10,12]",topo_weight/cluster.py
+https://github.com/Pro-Alert/ProAlert,fse2025/3729367.pdf,fse2025/ProAlert-main,where the codebase propagates to next k hops in graph ,"[62,120]",topo_weight/propagate.py
+https://github.com/USC-SQL/BugSpot-Artifact,fse2025/3729370.pdf,fse2025/BugSpot-Artifact-master,what are inputs that the tool take?,"[11,17]",README.md
+https://github.com/USC-SQL/BugSpot-Artifact,fse2025/3729370.pdf,fse2025/BugSpot-Artifact-master,does it use any llm models? if yes find me the code where it specifies the models?,"[17,20]",tool_main.py
+https://github.com/USC-SQL/BugSpot-Artifact,fse2025/3729370.pdf,fse2025/BugSpot-Artifact-master,how do they check if the bug report has been reproduced successfully? ,"[18,50]",recognizer_main.py
+https://github.com/USC-SQL/BugSpot-Artifact,fse2025/3729370.pdf,fse2025/BugSpot-Artifact-master,how does it check if the information of the bug report is correct?,"[62,75]",dsl.py
+https://github.com/USC-SQL/BugSpot-Artifact,fse2025/3729370.pdf,fse2025/BugSpot-Artifact-master,how does it load all the buggy reports and prompts the model?,"22,50]",report_parser/parser_main.py
+https://zenodo.org/records/14927923,fse2025/2410.22663v4.pdf,fse2025/trustworthiness-oracle,how does it cluster depending on a threshold?,"[342,366]",toki.py
+https://zenodo.org/records/14927924,fse2025/2410.22663v4.pdf,fse2025/trustworthiness-oracle,where does it load all of datasets for classifiers?,"[1,523]",load_data.py
+https://zenodo.org/records/14927925,fse2025/2410.22663v4.pdf,fse2025/trustworthiness-oracle,how does it produce the output from inputs to use later on for proving trustworthiness,"[19,27]",explain_data_collector.py
+https://zenodo.org/records/14927926,fse2025/2410.22663v4.pdf,fse2025/trustworthiness-oracle,how does it evaluate whether words are similar from semantic point of view?,"[316,387]",data_methods.py
+https://zenodo.org/records/14927927,fse2025/2410.22663v4.pdf,fse2025/trustworthiness-oracle,"where does it load all explanations, input, outputs from the model for test training purpose?","[1,52]",preload_explanation.py
+https://github.com/testmigrator/testsmellrefactoring,fse2025/2409.16739v2.pdf,fse2025/testsmellrefactoring-master,how does it preprocess and read the codes from the path?,"[1,31]",process.py
+https://github.com/testmigrator/testsmellrefactoring,fse2025/2409.16739v2.pdf,fse2025/testsmellrefactoring-master,it says it builds a prompt in purpose of refactoring for llm model? ,"[43,85]",code_repo_v5.py
+https://github.com/testmigrator/testsmellrefactoring,fse2025/2409.16739v2.pdf,fse2025/testsmellrefactoring-master,find me the started code for test refactoring ,"[1,105]",refactoring_test.py
+https://github.com/testmigrator/testsmellrefactoring,fse2025/2409.16739v2.pdf,fse2025/testsmellrefactoring-master,where does it define all the smell type for test refactoring?,"[1,31]",TestSmellType.java
+https://github.com/testmigrator/testsmellrefactoring,fse2025/2409.16739v2.pdf,fse2025/testsmellrefactoring-master,where does it process all the smells detected?,"[31,82]",refactoring_test.py
+https://github.com/yuvrajvirk/CalibrationLLMsCodeSummaries/,fse2025/2404.19318v3.pdf,fse2025/CalibrationLLMsCodeSummaries-main,where does it rescale the logits?,"[1,146]",platt_scale.py
+https://github.com/yuvrajvirk/CalibrationLLMsCodeSummaries/,fse2025/2404.19318v3.pdf,fse2025/CalibrationLLMsCodeSummaries-main,where does it generate llm rating ?,"[387,439]",self_reflection_prompting.py
+https://github.com/yuvrajvirk/CalibrationLLMsCodeSummaries/,fse2025/2404.19318v3.pdf,fse2025/CalibrationLLMsCodeSummaries-main,find me the code where it uses similairity score and model logits to plot similarity?,"[211,293]",reliability_plot.py
+https://github.com/yuvrajvirk/CalibrationLLMsCodeSummaries/,fse2025/2404.19318v3.pdf,fse2025/CalibrationLLMsCodeSummaries-main,where does it declare all the llm models to infer?,"[1,361]",summarization_inference.py
+https://github.com/yuvrajvirk/CalibrationLLMsCodeSummaries/,fse2025/2404.19318v3.pdf,fse2025/CalibrationLLMsCodeSummaries-main,find me the code where it calculates metrics?,"[1,199]",thresholds.py
+https://github.com/yuvrajvirk/CalibrationLLMsCodeSummaries/,fse2025/2404.19318v3.pdf,fse2025/CalibrationLLMsCodeSummaries-main,where does it calculate calibration metrics?,"[14,83]",calibration_vs_token_cutoff.py
+https://github.com/contextcraft/contextcraft,fse2025/3715753.pdf,fse2025/contextcraft-main,it says it uses token position in prompt? can you find the relevant code ?,"[66,90]",ContextCraft.py
+https://github.com/contextcraft/contextcraft,fse2025/3715753.pdf,fse2025/contextcraft-main,where is the main file for method name prediction using the prompts as mentioned in the paper?,"[1,22]",method_name_pred.py
+https://github.com/contextcraft/contextcraft,fse2025/3715753.pdf,fse2025/contextcraft-main,find me the configuration for the gemini api usage?,"[13,23]",model_config.py
+https://github.com/contextcraft/contextcraft,fse2025/3715753.pdf,fse2025/contextcraft-main,in the paper it mentions it finds the highest similarity between the description and function name?,"[18,41]",PivotWordIdentification.py
+https://github.com/contextcraft/contextcraft,fse2025/3715753.pdf,fse2025/contextcraft-main,how does it calculate probability for suffixes prefixes of the token?,"[35,73]",ProbabilisticTokenPositioning.py
+https://github.com/whisperzqh/FastCoder,ase2025/2502.17139v2.pdf,ase2025/FastCoder-main,where does it evaluate repository and calculate time taken?,"[28,182]",repoeval_test.py
+https://github.com/whisperzqh/FastCoder,ase2025/2502.17139v2.pdf,ase2025/FastCoder-main,how they train the model?,"[70,103]",fastcoder_model.py
+https://github.com/whisperzqh/FastCoder,ase2025/2502.17139v2.pdf,ase2025/FastCoder-main,what is the code where they implement the caching of previous states ?,"[1,115]",kv_cache.py
+https://github.com/whisperzqh/FastCoder,ase2025/2502.17139v2.pdf,ase2025/FastCoder-main,how do they evaluate the best candidate depending on the prevoious states?,"[12,67]",utils.py
+https://github.com/whisperzqh/FastCoder,ase2025/2502.17139v2.pdf,ase2025/FastCoder-main,how do they generate the candidates for the outputs?,"[125,229]",utils.py
+https://github.com/whisperzqh/FastCoder,ase2025/2503.16913v3.pdf,ase2025/FGIT-main,find me the supervised fine tuning based on the differneces between correct and incorrect code,"[27,147]",loss_radio.py
+https://github.com/whisperzqh/FastCoder,ase2025/2503.16913v3.pdf,ase2025/FGIT-main,how does it build features based on correct and incorrect code,"[63,91]",data.py
+https://github.com/whisperzqh/FastCoder,ase2025/2503.16913v3.pdf,ase2025/FGIT-main,does it tokenize the code before feeding or feed the whole code block at the same time?,"[135,151]",data.py
+https://github.com/whisperzqh/FastCoder,ase2025/2503.16913v3.pdf,ase2025/FGIT-main,find me the file associated with the training,"[1,152]",train_new.py
+https://github.com/whisperzqh/FastCoder,ase2025/2503.16913v3.pdf,ase2025/FGIT-main,how does it calculate the differences between codes? can you find me those?,"[1,86]",utils.py
+https://github.com/ZJU-CTAG/CoSIL,ase2025/2503.22424v3.pdf,ase2025/CoSIL-master,where is the pruner that the paper mentions to reduce the direction diversion,"[586,655]",AFL.py
+https://github.com/ZJU-CTAG/CoSIL,ase2025/2503.22424v3.pdf,ase2025/CoSIL-master,how does it merge the predicted location and where ?,"[135,167]",AFL_localize_file.py
+https://github.com/ZJU-CTAG/CoSIL,ase2025/2503.22424v3.pdf,ase2025/CoSIL-master,how does it first start processing the bug?,"[9,27]",get_verified_structure.py
+https://github.com/ZJU-CTAG/CoSIL,ase2025/2503.22424v3.pdf,ase2025/CoSIL-master,"in the agentless scenario, how does it retrieve the file location?","[19,131]",agentless/fl/retrieve.py
+https://github.com/ZJU-CTAG/CoSIL,ase2025/2503.22424v3.pdf,ase2025/CoSIL-master,where does it run the regression tests?,"[1,225]",select_regression_tests.py
+https://github.com/YerbaPage/LongCodeZip,ase2025/2510.00446v1.pdf,ase2025/LongCodeZip-main,it says it can compress long codes using qwen models. find me the code,"[16,26]",code_compressor.py
+https://github.com/YerbaPage/LongCodeZip,ase2025/2510.00446v1.pdf,ase2025/LongCodeZip-main,the metric mentions perplexity where does it calculate?,"[46,101]",code_compressor.py
+https://github.com/YerbaPage/LongCodeZip,ase2025/2510.00446v1.pdf,ase2025/LongCodeZip-main,so it divides big file to small chunks mentioned in the paper? can you find it?,"[671,1453]",code_compressor.py
+https://github.com/YerbaPage/LongCodeZip,ase2025/2510.00446v1.pdf,ase2025/LongCodeZip-main,it also retrieves the function using rag based method? can you find it?,"[82,119]",main.py
+https://github.com/YerbaPage/LongCodeZip,ase2025/2510.00446v1.pdf,ase2025/LongCodeZip-main,find me the evaluation functions?,"[388,747]",main.py
+https://github.com/ZJU-CTAG/CodeBridge,fse2025/2504.07740v1.pdf,fse2025/CodeBridge-main,how does it generate comments for a given code segment?,"[23,48]",generate_comment.py
+https://github.com/ZJU-CTAG/CodeBridge,fse2025/2504.07740v1.pdf,fse2025/CodeBridge-main,where does it calculate all the metrics for this experiement?,"[1,45]",metric.py
+https://github.com/ZJU-CTAG/CodeBridge,fse2025/2504.07740v1.pdf,fse2025/CodeBridge-main,it uses model to generate code using dataset? where?,"[31,77]",generate_code.py
+https://github.com/ZJU-CTAG/CodeBridge,fse2025/2504.07740v1.pdf,fse2025/CodeBridge-main,it evalutes given the level and code? find me the relevant code sections,"[126,140]",eval.py
+https://github.com/ZJU-CTAG/CodeBridge,fse2025/2504.07740v1.pdf,fse2025/CodeBridge-main,how does it build features given the text?,"[152,210]",text_dataset.py
+https://github.com/OpenAutoCoder/Agentless,fse2025/2407.01489v2.pdf,fse2025/Agentless-main,where does it process the patches?,"[1,72]",get_patch_info.py
+https://github.com/OpenAutoCoder/Agentless,fse2025/2407.01489v2.pdf,fse2025/Agentless-main,it creates the github repo like structure in the code to further processing?,"[1,193]",get_repo_structure.py
+https://github.com/OpenAutoCoder/Agentless,fse2025/2407.01489v2.pdf,fse2025/Agentless-main,in the paper they mentioned about the costs ? where do they calculate the cost,"[1,78]",cost.py
+https://github.com/OpenAutoCoder/Agentless,fse2025/2407.01489v2.pdf,fse2025/Agentless-main,where do they plot the results?,"[32,195]",graph_classification.py
+https://github.com/OpenAutoCoder/Agentless,fse2025/2407.01489v2.pdf,fse2025/Agentless-main,where do they work with the metadata?,"[28,61]",index.py

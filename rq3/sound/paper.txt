@@ -1,0 +1,128 @@
+This section will detail our approach, as shown in Figure 3,
+which consists of four parts: preprocessing, line-level analysis,
+file-level classification, and global ranking.
+A. Preprocessing
+In this step, we employ Bag of Tokens (BoT) as features
+representing the source code files. Specifically, we utilize
+the CountVectorizer [34] function from the Scikit-Learn
+library to extract code tokens from each code line in the
+historical source code, i.e., convert Line l into its token se-
+quence token(l). Considering that the programming language
+in the source code is case-sensitive (e.g., two variables, var
+and Var, are noticeably different), no lowercase conversion,
+stemming, or tokenization processing is implemented. This
+decision ensures that all tokens in the files, excluding non-
+alphabetic characters, are retained during preprocessing to
+reserve meaningful tokens. To illustrate, Line 2 in Figure 2(a)
+is divided into four tokens, i.e., workspace, CacheUtils,
+getWorkspace, and session, after preprocessing.
+B. Line-level Analysis
+This section presents the methodology for conducting line-
+level analysis of the source code, divided into two parts:
+spectrum information calculation and causality analysis.
+1) Spectrum Information Calculation: We introduce the
+program spectrum perspective to quantify the contribution of
+tokens to the defect lines. We view individual lines of code as
+the set of program statements covered during test executions,
+the tokens they contain as program statements, and the line-
+level label as the results of test case executions.
+To facilitate the following calculation, we list four notations
+(some have already been applied in Equation 2) as follows:
+• defect(t): number of defective lines containing token t
+• clean(t): number of clean lines containing token t
+• nd: total number of defective lines
+• nc: total number of clean lines
+Based on these notations, the token suspiciousness calcula-
+tion process comprises these steps:
+x Spectrum Information Collection. We collect spectrum
+information for each token by iterating through each line of
+historical source code and updating the spectrum information
+for the tokens contained in each line based on their actual
+defect status. Then we get the spectrum information (i.e.,
+defect(t) and clean(t)) for each token t, along with the counts
+(i.e., nd and nc) of defective lines and clean lines.
+y Token Score Evaluation. With the collected spectrum
+information, we calculate the suspicion score for each token.
+Based on previous research [31], we predominantly encompass
+IV-D). Less IFA values mean that our method is more actionable.
+several commonly utilized formulas for calculating suspicion
+scores in spectrum-based fault localization. Specifically, we
+employ five formulas, i.e., Barinel, Dstar, Ochiai, Op2,
+and Tarantula, as shown in Table I, to calculate the suspicion
+score for each token. For each formula, we revise its variables
+in the context of CLDP, i.e., replacing original variables with
+four notations defined above (similar to the conversion from
+Equation 1 to Equation 2).
+2) Causality Analysis: Causality analysis effectively breaks
+down complex relationships among different factors, pre-
+senting them as an intuitive and highly interpretable causal
+graph [40]. The edges within causal graphs signify causal re-
+lations differentiated from widely recognized correlations. The
+fundamental contrast between causal relations and correlations
+necessitates the use of causality analysis. The process can be
+divided into three steps:
+x Token Selection. Given the substantial computational
+resources required for causal analysis, we have restricted our
+study to the top 100 tokens5 with the highest suspicion scores.
+y Causal Graph Learning. We extract the BoTs of the 100
+tokens with the corresponding label of each file to learn the
+causal graph. By utilizing the ScaleFreeDAGDistribution
+and BGe in dibs.models [41] as graph model and observation
+model, we have the result of the adjacency matrix to denote
+the DAG, where each element denotes the causal probability
+of an edge between two variables.
+z Causal Token Extraction. We retain the tokens with
+causal probabilities ≥ 0.99 as the set of tokens causally related
+to defect situations since the probabilities obtained by the
+model are not necessarily 0 or 1 [41].
+C. File-level Classification
+To enhance prediction accuracy, our method utilizes a file-
+level prediction tool to exclude some files predicted as defect-
+free. Research [9] has shown that logistic regression (LR) is a
+simple yet effective supervised classifier capable of accurately
+identifying defective lines in defect prediction scenarios.
+In this approach, the LR classifier employs BoT vectors
+of files generated from preprocessing as features [11], with
+the defect status of files as labels trained on historical data.
+After training, the classifier is applied to current files for
+classification, yielding predicted labels and file scores for
+subsequent ranking, as detailed in Section III-D.
+D. Global Ranking
+Previous studies [9], [11], [12] have either investigated the
+effectiveness of line ranking within a single file or first ranked
+the files based on their defect probability, followed by ranking
+the lines within single files and then assessing the effectiveness
+of the overall ranking6. Our approach utilizes a more effective
+strategy, i.e., a global ranking strategy that integrates lines
+from all current files and ranks them based on line-level
+suspicion scores7. As explained in Section III-C, we first use
+LR to filter the code files so that only the predicted defective
+files remain. For these files, excluding comment lines, we then
+perform a subsequent ranking of source code lines.
+x Line score evaluation. Based on the suspicion score
+obtained for each token, for lines l in the current files, the
+scores of each token contained within Line l are accumulated
+according to the occurrence times of the token in that line:
+Sf (l) =
+Sf (t) ×f req(t) (3)
+t∈token(l)
+where f ∈ {Barinel, Dstar, Ochiai, Op2, Tarantula} and
+f req(t) indicates the occurrence times of the token t in Line
+l. This process yields the line-level suspicion score Sf (l) for
+each code line in the current files.
+y Initial ranking. The source code lines are ranked in
+reverse order based on the line-level suspicion score results,
+discarding those with a suspicion score of 0, to yield the initial
+ranking list.
+z Enhanced ranking. We utilize a set of causal tokens
+extracted from historical data (see Section III-B) to enhance
+the ranking performance at the top of the list. The defect rate
+x% =nd
+nd +nc
+is computed from the historical data. For the
+top x% part of the current ranking list, lines that contain
+causal tokens will be moved to the front of the ranking list.
+For instance, the top x% part of the ranking list based on
+initial line suspicion scores is [l1, l2, l3, l4, l5], where l1 has
+the highest score and l5 has the lowest. Assuming l2 and l4
+contain causal tokens, the result after tuning is [l2, l4, l1, l3, l5].

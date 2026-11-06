@@ -1,0 +1,149 @@
+This section presents the details of our proposed approach UTRefactor. As shown in Figure 2, it
+can be divided into three main steps:
+Step ❶ Preprocessing. We begin by extracting the test code from the project and detecting
+all test smells present. For tests that need to be refactored due to the presence of smells, we also
+extract relevant code context (such as the tested methods and classes) during this step, treating this
+context as external knowledge for the LLM.
+Step ❷ Test Refactoring Knowledge Base Construction. In this step, we design the types and
+definitions of test smells to serve as external knowledge that the LLM can reference. Additionally,
+we use a Domain-Specific Language (DSL) [28] to define corresponding refactoring rules for each
+type of test smell, constructing a comprehensive refactoring knowledge base.
+Step ❸ Refactored Test Generation. This step focuses on generating the refactored test code.
+We design a specialized prompt template tailored for the test refactoring task. Moreover, we employ
+the Chain-of-Thought (CoT) [6] reasoning approach and propose a checkpoint mechanism to
+improve the LLM’s performance in refactoring test code.
+3.1 Preprocessing
+As shown in Figure 2, this step involves three key processes: extracting the test code, identifying
+test smells, and gathering relevant contextual information about the tests.
+3.1.1 Test Extraction. First, UTRefactor automatically gathers all test files from the test directory
+(e.g., src/test) within a given Java project. To avoid unnecessary detection of code smells and
+refactoring overhead, during the extraction process, we analyze whether the test files contain
+at least one method annotated with @Test and automatically filter out files that do not have the
+@Test annotation. Besides, to analyze the focal methods in a fine-grained approach and meet the
+requirements of test smell detection, we collect the corresponding classes under test in this step.
+Specifically, we strip the prefix and suffix Test from the test file names (e.g., ParserTest→Parser),
+and use this as an index to search for matching class files in the src/main directory. If a match is
+successful, the test file and the corresponding class under test are paired and collected together.
+3.1.2 Test Smell Detection. To detect test smells present in the project, we integrate the tsDetect [31],
+an automated test smell detection tool for Java projects.
+Refining Detection Granularity. Our UTRefactor performs refactoring at the level of indi-
+vidual test methods, refactoring one test at a time. However, the tsDetect operates at a file-level
+granularity, meaning it can detect test smells in a test file as a whole but cannot pinpoint smells
+within specific test methods. To support the detection of smells at the level of individual test
+methods, we refine the test smell detection granularity. Specifically, we employ a split-and-merge
+approach: before smell detection, we split each test file into multiple sub-files, with each sub-file
+containing a single test method and its necessary context. This ensures that tsDetect can analyze
+each test method independently. After the refactoring process is completed, these sub-files are
+merged back together into a complete test file based on the original split index.
+3.1.3 Test Context Collection. Since refactoring operations are aimed at optimizing the code
+structure without altering its functional logic, it is crucial to ensure that the LLM has a sufficient
+understanding of the test code’s functionality before refactoring. Moreover, Yuan et al. [41] have
+demonstrated that providing additional test context can significantly enhance the performance
+of LLMs in test code generation tasks. Inspired by these findings and applying them to the task
+of refactoring test code, we extract relevant contextual information from tests that exhibit smells
+and use it as external knowledge to help the LLM better comprehend the original test’s intent, as
+shown in Table 1.
+In this step, we extract the contextual information for each test that requires refactoring. During
+the subsequent refactoring steps, this information is integrated into the refactoring prompt template
+as a knowledge source to assist the LLM in accurately understanding the test’s original intent.
+3.2 Test Refactoring Knowledge Base Construction
+In this step, we design the test smell types and corresponding refactoring rules as applicable external
+knowledge, aiming to enhance the LLM’s understanding of test smells and effectively eliminate
+those present in unit tests.
+3.2.1 Test Smell Knowledge. In the smell detection step, we integrate tsDetect, which uses the 19
+types of test smells defined by Peruma et al. [31]. Although they define test smells and provide
+relevant code examples, the definition of test smells is not standardized across existing research,
+and the types and numbers of smells can vary between studies.
+Additionally, LLMs are trained on data
+from various sources, such as blogs and
+GitHub repositories, which can lead to signif-
+icant differences between LLMs in terms of
+training data. This variability leads to incon-
+sistencies in how LLMs interpret test smells,
+which in turn affects the effectiveness of the
+refactoring process. To illustrate this issue,
+we use LLaMA-70b [12]. As shown in Figure 3,
+when asked about the meaning of specific
+test smells, the LLM’s responses deviate from
+our expectations. For example, tsDetect does
+not include Fragile Test in its list of smells.
+Fig. 3. An example of test smell explanation of the LLM.
+Additionally, for the Mystery Guest smell,
+LLaMA-70b provides a vague explanation, whereas tsDetect defines it as the presence of unused
+variables in the setup/teardown method. There are also instances where the definitions are similar,
+but the naming conventions differ. For example, Missing Assertion refers to a test method that
+lacks a test oracle, but in tsDetect, this is categorized as Unknown Test.
+To mitigate the impact of these inconsistencies on the refactoring process, we provide the LLM
+with a clear and standardized set of test smell definitions before refactoring. Given that Peruma et
+al. [31] provide comprehensive definitions, explanations, and code examples for 19 test smells in
+Java, we use these to build part of the external knowledge base for test smells, providing it to the
+LLM to eliminate inconsistencies in smell interpretation that could impact the refactoring process.
+Due to space limitations, the detailed definitions of these smells are available in our replication
+package [16]. For each smell type, we provide a structured definition, including a description of the
+test smell, its impact, and a pseudocode example to illustrate the concept. During the refactoring
+process, these standardized smell definitions guide the LLM’s interpretation of the smells present
+in the test, ensuring consistent and accurate refactoring results.
+3.2.2 Test Refactoring Rule DSL. To eliminate the smells present in tests, we design corresponding
+refactoring rules for each type of smell. We draw on previous manual approaches to eliminating
+test smells and empirical research on test smell refactoring [17]. Based on these insights and best
+testing practices, we formalize DSL rules for each type of test smell, which form the foundation
+of the entire refactoring process. In designing these DSLs, we exclude simple smell types such as
+Default Test, which refers to default test classes automatically created by Android Studio when a
+project is initialized and do not require refactoring. Similarly, we handle Ignored Test (tests marked
+as ignored) and Empty Test (tests with empty method bodies) by simply removing the unit tests
+that exhibit these smells. Finally, we define 13 method-level DSLs for Java test smells, aimed at
+eliminating smells in unit tests. Due to space limitations, the complete set of DSLs is available in
+our replication package [16]. Since these DSLs determine the methods and steps for eliminating
+test smells, which is crucial for unit test refactoring, we evaluate the correctness of the DSL design
+by assessing whether the refactored tests successfully eliminate the smells without introducing
+new issues. This will be discussed in detail in subsequent sections.
+We leverage LLMs to refactor tests with iden-
+tified smells according to the provided refac-
+toring rules. A common approach is to de-
+scribe these refactoring rules in natural lan-
+guage as prompts for the LLM. While this ap-
+proach is straightforward and easy to under-
+stand, it presents challenges in practice: natural
+language can be ambiguous or imprecise, which
+may lead the LLM to generate code that does
+not meet expectations, especially when multi-
+ple smells are present in a single test. Without a
+clear strategy to guide the refactoring process,
+the LLM’s behavior can become unpredictable,
+resulting in inconsistent outcomes. Moreover,
+the lengthy natural language descriptions re-
+quired for such complex cases can hinder the
+LLM’s effectiveness in refactoring tests.
+To address this issue, we propose using a
+more precise Domain-Specific Language (DSL)
+to express the test smell refactoring rules. The
+advantage of using a DSL is that it allows for more precise and standardized descriptions of
+refactoring steps, thereby reducing the risk of misinterpretation. Additionally, DSLs are typically
+structured, which facilitates the extension and maintenance of new refactoring rules. In practice,
+developers can easily add and update refactoring rules within the defined DSL structure. This
+structured approach ensures that refactorings are consistent, predictable, and less prone to errors,
+providing a clear framework for expanding the tool to accommodate new test smells and evolving
+best practices in refactoring.
+be executed for this smell type. The Steps component breaks down the refactoring process into
+a sequence of actions, enabling a fine-grained, step-by-step approach to modifying the test code.
+Additionally, the Example provides before-and-after code snippets to demonstrate the practical
+application of the refactoring, aiding in both understanding and verification. Finally, Variables
+parameterize the refactoring logic, offering flexibility and reusability across different test cases. With
+this structure, the DSL systematically defines and executes complex code refactoring operations,
+which facilitates the automation of the test refactoring process.
+Next, we present specific refactoring rules for test smells. Figure 5 illustrates three concrete
+examples of these refactorings. For example, when a test contains multiple assert statements without
+descriptive messages, it is flagged with the Assertion Roulette smell. During refactoring, the test
+matches the DSL rule for the type Assertion Roulette. This rule guides the refactoring process by
+specifying the action AddMessageToAssert, which involves adding meaningful descriptive messages
+to each assert statement. Another example is when a test is identified with the Duplicate Assert
+smell. In this case, the test matches the corresponding DSL rule for Duplicate Assert, which outlines
+a three-step refactoring process to eliminate the smell: Step ❶ Replace the @Test annotation with
+@ParameterizedTest to enable parameterized testing. Step ❷ Add the @CsvSource annotation.
+This allows additional test cases to be added as parameters in @CsvSource, eliminating the need
+for multiple assertEquals statements. Step ❸ Reduce duplicate code by writing the test logic
+only once. Parameterized testing makes the test cases more intuitive and clearly expresses the
+relationship between different inputs and expected outputs.
+We put the details of DSLs on our replication package [16]. These rules are then provided to the
+LLM as external knowledge during the refactoring process, guiding the LLM to refactor the test
+according to the predefined rules.

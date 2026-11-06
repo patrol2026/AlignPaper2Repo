@@ -1,0 +1,162 @@
+. Problem Formulation
+Given a long code context c= {c1,...,cn}with n tokens
+and a task instruction q= {q1,...,qm}, the goal of context
+compression is to produce a compressed context c′ ⊆ c
+such that |c′| ≤ B, where B is the computational budget
+in tokens. The objective is to maximize task performance
+while satisfying the budget constraint. For instance, in the
+code completion task, the instruction could be: ”Complete the
+following function [code to be completed]”. The long context
+could consist of the unfinished code along with retrieved code
+snippets.
+Rather than relying solely on embedding similarity between
+q and c, we propose to select context snippets based on their
+mutual information, specifically, how much they reduce the
+perplexity (PPL) of generating q. Specifically, for each candi-
+date context c, we define the approximated mutual information
+AMI(c,q) as the reduction in perplexity when c is provided:
+Here, P denotes the model’s next-token prediction probability,
+and q<i is the sequence of preceding tokens before qi. A
+higher AMI score indicates that c enables the model to better
+predict q, capturing both surface-level and dependency-based
+relevance. We therefore compress long contexts by retaining
+code snippets with the highest mutual information, ensuring
+that the most essential information for code generation is
+preserved.
+B. Overview
+The overview of LongCodeZip is illustrated in Figure 2.
+Given input of long source code, a task instruction, and a token
+budget, LongCodeZip follows a coarse-to-fine compression
+pipeline. In the coarse-grained compression stage (Section
+III-C), the source code is divided into function-level chunks,
+which are ranked by their relevance to the instruction using
+conditional perplexity. The top N functions are then selected
+under a coarse budget, effectively filtering out irrelevant code
+and avoiding unnecessary computation. In the fine-grained
+compression stage (Section III-D), each retained function is
+further segmented into semantic blocks via perplexity-based
+chunking. An adaptive retention ratio is assigned to each
+function according to its estimated importance. Within each
+function, the most relevant blocks are selected by formulating
+the problem as a 0/1 knapsack optimization, ensuring that the
+retained content maximizes relevance while fitting within the
+allocated token budget.
+By combining coarse-grained filtering with fine-grained
+pruning, LongCodeZip achieves a balance between aggressive
+compression and semantic preservation, thereby improving
+both efficiency and task performance.
+The coarse-grained compression aims to select high-level
+code chunks that are most relevant to the task instruction. This
+process consists of three steps:
+Function-Level Chunking. We first split the source code into
+chunks along function or class boundaries. Functions naturally
+encapsulate coherent logic and exhibit strong modularity [31].
+Chunking at this level ensures that retained code segments are
+both syntactically valid and semantically self-contained, which
+is essential for preserving program integrity.
+Instruction-aware Relevance Ranking. To measure the rel-
+evance of each chunk to the task instruction, we employ an
+instruction-aware ranking mechanism based on approximated
+mutual information (1). Chunks are scored and ranked in
+descending order, allowing us to prioritize those most infor-
+mative for the given task.
+Budget-Constrained Function Selection. Finally, we greedily
+select the top-ranked chunks under a coarse-grained token
+budget Bcoarse, which is the division of the final token budget
+B by the configurable fine-grained compression ratio Rfine.
+This greedy selection balances efficiency and coverage: a
+larger budget allows more functions to pass into the fine-
+grained stage, potentially improving downstream quality but at
+higher computational cost, while a smaller budget accelerates
+processing at the risk of discarding useful code. Chunks
+not selected are replaced with placeholders (e.g., comment
+markers or ellipses), which preserve the global structure while
+reducing overall context length.
+D. Fine-Grained Compression: Intra-Function Pruning
+After selecting relevant function-level chunks in the first
+stage, we apply finer-grained compression to further reduce
+context length while preserving critical content. This process
+involves three steps:
+Block-Level Chunking. The main challenge in intra-function
+compression is pruning code without breaking internal logic.
+To address this, each function is segmented into smaller,
+semantically coherent blocks. A naive idea is to split code by
+whitespace lines, but such line-based heuristics often misalign
+with semantic boundaries. Inspired by techniques in natu-
+ral language processing [32], we employ a perplexity-based
+method to identify semantic block boundaries within code.
+While perplexity-based grouping has shown effectiveness in
+natural language segmentation, it remains under-explored in
+code. Consecutive lines in code often form strong semantic
+associations, making perplexity a useful signal. Within a
+semantically coherent region, perplexity tends to decrease as
+context accumulates [32]. We treat each line of code as the
+smallest atomic unit and group consecutive lines based on
+their perplexity scores, calculated as in (3). When a line’s
+perplexity exhibits a sharp local increase, exceeding that of its
+neighbors by at least αtimes of the standard deviation over all
+lines, we mark it as a block boundary. Such high-perplexity
+lines typically mark the beginning of a new block, reflecting
+underlying semantic or structural changes. This perplexity-
+guided aggregation allows blocks to capture meaningful code
+segments while preserving the code structure.
+Adaptive Budget Allocation. Functions selected in the
+coarse-grained stage vary in importance. Hence, applying a
+uniform compression ratio across all of them is suboptimal.
+To address this, we introduce an adaptive budget allocation
+mechanism that distributes the fine-grained token budget pro-
+portionally to function importance. Functions with higher AMI
+scores receive more token budgets, preserving greater detail,
+while very small functions Fsmall (shorter than five lines) are
+kept in full. Algorithm 1 summarizes the procedure.
+We first define the baseline retention ratio for large func-
+tions:
+B−
+j∈Fsmall
+Rbase =
+Tj
+, (4)
+Tk
+k∈Flarge
+where B is the final token budget, Fsmall and Flarge represent
+the sets of small and large functions respectively, and Tj
+denotes the number of tokens in function j.
+For functions f1,...,fN selected in the coarse-grained
+stage, we perform min-max normalization to all AMI scores
+to AMInorm,i.
+For each large function fi, and its normalized AMI score
+AMInorm,i ∈[0,1], a biased retention ratio is then computed
+as
+Rbiased,i= Rbase·(1 + β·(2 ×AMInorm,i−1)), (5)
+where Rbase is the baseline retention ratio for large functions
+(Equation 4). The importance parameter β adjusts sensitivity
+to importance. When the importance parameter is set to 0,
+there is no bias, meaning all functions are treated equally. A
+more positive βincreases the emphasis on important functions,
+allocating more tokens to them. All retention rates are clamped
+to [0,1] and globally rescaled so that the total number of
+retained tokens matches the target token budget for large
+functions Blarge:
+Ri = Rbiased,i·
+Blarge
+, (6)
+j Rbiased,j·Tj
+where Tj represents the number of tokens in the j-th function.
+This adjustment preserves the relative importance between
+functions while ensuring the global constraint is satisfied.
+Dynamic Block Selection. For each function, LongCodeZip
+identifies a subset of blocks to retain, aiming to maximize the
+total relevance within the constraints of the allocated token
+budget. This strategy ensures that the compressed context
+achieves the highest possible information density. We formu-
+late this selection as a classic 0/1 knapsack problem: each
+block is treated as an item, where the value corresponds to its
+normalized AMI score and the weight corresponds to its token
+length. The detailed procedure is outlined in Algorithm 2.
+We employ a dynamic programming approach to compute the
+optimal subset of blocks that satisfies the budget constraint
+while maximizing the cumulative value.
+IV. EXPERIMENTAL SETUP
+A. Research Questions (RQs)
+RQ1: Can LongCodeZip effectively compress code context
+while preserving the downstream performance?

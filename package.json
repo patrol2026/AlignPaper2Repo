@@ -1,0 +1,160 @@
+{
+    "name": "AlignPaper2RepoExt",
+    "displayName": "AlignPaper2RepoExt",
+    "publisher": "AlignPaper2Repository",
+    "version": "0.1.5",
+    "engines": {
+        "vscode": "^1.108.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onCommand:paperRepo.selectPaper",
+        "onCommand:paperRepo.selectRepo",
+        "onCommand:paperRepo.buildIndex",
+        "onCommand:paperRepo.askQuestion",
+        "onCommand:paperRepo.setEmbeddingApiKey",
+        "onCommand:paperRepo.clearEmbeddingApiKey",
+        "onCommand:paperRepo.setApiKey",
+        "onCommand:paperRepo.clearApiKey",
+        "onCommand:paperRepo.setApiKeyForCurrentModel",
+        "onCommand:paperRepo.clearApiKeyForCurrentModel",
+        "onCommand:paperRepo.openApp",
+        "onView:paperRepo.controls",
+        "onCommand:paperRepo.debugShowConfig"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "paperRepo.setEmbeddingApiKey",
+                "title": "Paper–Repo: Set Embedding API Key"
+            },
+            {
+                "command": "paperRepo.setApiKeyForCurrentModel",
+                "title": "Paper–Repo: Set API Key for Current Model"
+            },
+            {
+                "command": "paperRepo.clearApiKeyForCurrentModel",
+                "title": "Paper–Repo: Clear API Key for Current Model"
+            },
+            {
+                "command": "paperRepo.openApp",
+                "title": "Paper–Repo: Open App (Right Panel)"
+            },
+            {
+                "command": "paperRepo.buildIndex",
+                "title": "Paper–Repo: Build Index"
+            },
+            {
+                "command": "paperRepo.askQuestionDirect",
+                "title": "Paper–Repo: Ask Question"
+            },
+            {
+                "command": "paperRepo.selectRepo",
+                "title": "Paper–Repo: Select Repo Folder"
+            },
+            {
+                "command": "paperRepo.selectPaper",
+                "title": "Paper–Repo: Select Paper (PDF)"
+            },
+            {
+                "command": "paperRepo.setApiKey",
+                "title": "Paper–Repo: Set LLM API Key"
+            },
+            {
+                "command": "paperRepo.clearApiKey",
+                "title": "Paper–Repo: Clear LLM API Key"
+            },
+            {
+                "command": "paperRepo.debugShowConfig",
+                "title": "Paper–Repo: Debug Show Config",
+                "category": "Paper–Repo"
+            },
+            {
+                "command": "paperRepo.runCsvAskMultiIndex",
+                "title": "Paper–Repo: Run Prompts from CSV (per repo/paper)"
+            }
+        ],
+        "configuration": {
+            "title": "AlignPaper2Repo",
+            "properties": {
+                "paperRepo.model": {
+                    "type": "string",
+                    "default": "gpt-4o-mini",
+                    "description": "LLM model name (OpenAI-compatible)."
+                },
+                "paperRepo.embeddingModel": {
+                    "type": "string",
+                    "default": "text-embedding-3-small",
+                    "description": "Embedding model for retrieval."
+                },
+                "paperRepo.apiBase": {
+                    "type": "string",
+                    "default": "https://api.openai.com/v1",
+                    "description": "OpenAI-compatible REST base URL."
+                },
+                "paperRepo.topK": {
+                    "type": "number",
+                    "default": 8,
+                    "description": "Top-K code chunks to send to the LLM for re-ranking."
+                },
+                "paperRepo.maxChunkLines": {
+                    "type": "number",
+                    "default": 40,
+                    "description": "Maximum lines per code chunk when indexing."
+                },
+                "paperRepo.temperature": {
+                    "type": "number",
+                    "default": 0,
+                    "description": "LLM temperature for selection."
+                }
+            }
+        },
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "paperRepo",
+                    "title": "Paper–Repo",
+                    "icon": "resources/icon.svg"
+                }
+            ]
+        },
+        "views": {
+            "paperRepo": [
+                {
+                    "type": "webview",
+                    "id": "paperRepo.controls",
+                    "name": "Controls"
+                }
+            ]
+        }
+    },
+    "scripts": {
+        "start": "electron .",
+        "rebuild": "electron-rebuild",
+        "postinstall": "patch-package && electron-rebuild -f -v 39.2.7 -a arm64 -o tree-sitter,tree-sitter-python",
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "package": "vsce package",
+        "test": "echo 'no tests yet'"
+    },
+    "devDependencies": {
+        "@electron/rebuild": "^3.7.2",
+        "@types/node": "^20.11.30",
+        "@types/vscode": "1.108.1",
+        "patch-package": "^8.0.1",
+        "typescript": "^5.4.0",
+        "vsce": "^2.15.0"
+    },
+    "dependencies": {
+        "csv-parse": "^6.1.0",
+        "fast-glob": "^3.3.2",
+        "openai": "^4.104.0",
+        "tree-sitter": "^0.22.0",
+        "tree-sitter-compat": "^0.1.5",
+        "tree-sitter-python": "^0.20.0"
+    }
+}

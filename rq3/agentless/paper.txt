@@ -1,0 +1,182 @@
+Figure 1 shows the overview of AGENTLESS, consisting of three phases: localization,
+repair, and patch validation. We first take in the issue description and the existing project
+codebase as input. Then, we begin our hierarchical localization process by turning the
+project codebase into a tree-like structure that illustrates the relative location of each
+file in the project 1 . Next, using this repository structure along with the original issue
+description, we prompt the LLM to localize and rank the top N most suspicious files that
+likely require editing to solve the issue 2 . Since our repository structure format does not
+contain detailed source code information, we additionally retrieve files with most relevant
+code snippets with the issue description using embedding-based retrieval 3 . We then
+combine the retrieved files with the LLM-localized files to obtain the final list of suspicious
+files. However, not all contents in each file need to be modified. As such, we provide a
+skeleton for each file (i.e., a list of declaration headers of the classes and functions) and
+ask the LLM to output a specific list of classes and functions that we should examine
+more closely to fix the bug 4 . We then provide the complete code content of the previous
+locations and ask the LLM to finalize a smaller set of edit locations (i.e., classes, functions,
+or even specific lines) 5 . For the repair phase, we provide the code snippets at these edit
+locations together with the issue description and prompt the LLM to sample multiple
+patches to solve the issue 6 . Next, we enter the patch validation phase, where we first ask
+the LLM to sample multiple reproduction tests that aim to replicate the original issue 7 ,
+and then select the optimal one based on actual execution results on the original codebase
+8. AGENTLESS uses the reproduction test along with existing regression tests for patch
+ranking/selection 9 . Finally, AGENTLESS selects the top-ranked patch as the final patch
+for submission 10 . We now describe the steps in each of AGENTLESS’s phases in more detail.
+3.1 Localization
+To fix or implement a new feature, the first step is to obtain the locations in the source
+code, as without the correct locations, it can be impossible to provide the right edits. The
+difficulty lies in the fact that there could be hundreds of files with thousands of lines of code
+each in a repository, whereas the correct locations to edit are only a few selected lines or
+functions. AGENTLESS addresses this by using a simple three-step hierarchical localization
+process: 1) localize to suspicious files; 2) localize each selected files into relevant classes,
+functions, and variables; 3) localize to code edit locations
+3.1.1 Localize to suspicious files.
+First, AGENTLESS narrows down potential locations to specific suspicious files. Instead
+of providing the complete code snippet for each file, AGENTLESS constructs a concise
+representation of the repository’s file and directory structure, similar to the Linux tree
+command. We refer to this as the repository structure format, which begins with the root
+folder of the repository and organizes code files or folder names. Files and folders at the
+same directory level are aligned vertically, and files/folders in sub-directories are indented.
+We recursively traverse the entire repository to obtain the structure, which will be used
+as input for the LLM. The repository structure format provides the necessary file paths
+alongside the neighboring file names to maintain organizational information in the original
+codebase. AGENTLESS then inputs the processed repository structure along with the original
+issue description to an LLM, and requests it to identify a list of the top N suspicious files
+that need further inspection or modification to resolve the issue.
+To compliment the prompting-based localization (using file names only), AGENTLESS
+also uses a simple embedding-based retrieval method to identify additional suspicious
+files. However, instead of embedding all files in the repository, AGENTLESS first filters out
+irrelevant folders. This is done by providing the previously described repository structure
+and asking the LLM to produce a list of irrelevant folders that do not need to be further
+inspected or modified to resolve the issue. After removing all files from these irrelevant
+folders, AGENTLESS divides each remaining file into chunks of code segments and computes
+the embedding for each chunk using an embedding model. AGENTLESS then embeds the
+original issue description (i.e., the query) and computes the cosine similarity between the
+resulting query embedding and each chunk embedding to retrieve a list of relevant files
+that contain code segments with the highest similarity to the query. Finally, AGENTLESS
+combines the files obtained via prompting with those retrieved via embedding by selecting
+top N most common files localized by both, resulting in a final list of relevant files.
+3.1.2 Localize to related elements.
+After obtaining the list of suspicious files, AGENTLESS
+proceeds to the second part of the localization process:
+localize the related elements within these files. Directly
+providing the complete context of all files can be large.
+As such, AGENTLESS builds a compressed format of each
+file that contains the list of class, function, or variable
+declarations. We refer to this format as the skeleton for-
+mat, with an example shown in Figure 2. In the skeleton
+format, we provide only the headers of the classes and
+functions in the file. For classes, we further include any
+class fields and methods (signatures only). Additionally,
+we also keep comments in the class and module level to
+provide further information. Compared to providing the
+entire file context to the model, the skeleton format is a
+Figure 2: File skeleton format.
+much more concise representation, especially when the
+file contains thousands of lines, making it impractical/-
+costly to process all at once with existing LLMs. We provide the skeleton of all suspicious
+files to the LLM at one time in a single prompt, enabling the model to comprehensively ana-
+lyze the pertinent information and decide the most relevant elements. Using this input, we
+prompt the LLM to provide a list of related classes and functions that one should examine
+to fix the provided issue.
+3.1.3 Localize to edit locations.
+The previous localization step provided us with
+a list of related code elements; since we local-
+ize top N suspicious files, these localized re-
+lated code elements could be from different files.
+We now directly provide the code content from
+these elements to the LLM and ask it to localize
+specific edit locations. Compared to using the
+entire file, the input context here is much smaller.
+With this input, we then ask the LLM to identify
+the final set of edit locations, specified by line
+numbers, functions, or classes. Our simple hier-
+archical localization allows AGENTLESS to select
+a set of relevant code snippets as edit locations
+for repair.
+3.2 Repair
+In the repair stage, the goal is to produce the correct patch to solve the issue. Following
+existing work on LLM-based program repair [96, 49, 95, 42], we first utilize the identified
+edit locations and construct a context window of code snippets to provide to the LLM
+for repair. For example, if the identified location was a class from line 40 to 78, we would
+produce a context window of [40 - x, 78 + x] where x denotes the context window size.
+The intuition behind adding the additional code before and after the identified location is
+to provide the LLM with relevant contextual information for better program repair [96]. If
+multiple edit locations are identified, we would concatenate these context windows together
+separated with “...” to indicate missing context in the middle.
+Using the code snippets, we then ask the LLM to generate patches to solve the issue.
+However, instead of directly producing the entire code snippet to replace the entire given
+context, AGENTLESS asks the LLM to generate a Search/Replace edit [37]: a simple diff
+format to efficiently create each patch. Figure 3 shows an example of the Search/Replace
+format containing two main parts: 1) search: the original code snippet we want to replace
+and 2) replace: the replacement code snippet we want to replace with. To apply the generated
+Search/Replace diff to the original file, we can simply match the search code snippet and
+replace it with the replacement. This simple diff format avoids generating the complete code
+and instead focuses on producing small edits, which are not only more cost-efficient, but
+also more reliable and accurate (less chances for hallucination). For each issue, AGENTLESS
+uses the LLM to generate multiple potential patches (starting with greedy and then sample
+multiple patches with higher temperature).
+3.3 Patch Validation
+3.3.1 Reproduction test generation.
+Since AGENTLESS generates multiple candidate
+patches per issue, we need a way to select a final
+patch for submission. Please note that under the re-
+alistic SWE-bench setup, the original project code-
+base can only provide regression tests and not any
+reproduction tests (i.e., bug-triggering tests). This is
+because the issue has just been raised and the devel-
+opers have not added any additional tests to trigger
+the issue. As such, different from the Generate-and-
+Validate program repair setup [62], we do not have
+access to bug-triggering tests.
+Following prior work [81, 30], AGENTLESS gener-
+ates additional reproduction test to help with patch
+selection. More specifically, AGENTLESS leverages
+the LLM to synthesize a complete testing file that at-
+tempts to both reproduce the original issue described
+in the issue description, as well as verify whether the
+issue has been fixed. Figure 4 shows an example of
+the reproduction test that we want the model to syn-
+thesize. If the issue is reproduced, the test outcome
+should print Issue reproduced. On the other hand,
+the test should output Issue resolved if the issue has been fixed. We also include another
+output of Other issues if the test runs into any unexpected issues. To generate the reproduc-
+tion test, AGENTLESS provides the original issue description with an example reproduction
+test to demonstrate the test format. Similar to repair, we also sample multiple candidate
+reproduction tests and then execute each test on the original repository to filter any tests
+that do not output Issue reproduced. Finally, we normalize each test (remove comments,
+extra spaces, and normalize test names) and then select the test with the highest number of
+occurrence as the final reproduction test for each issue.
+3.3.2 Patch selection.
+Using the generated reproduction tests, we start our patch selection process to pick the final
+submission patch. AGENTLESS first runs all the existing tests in the repository to identify a
+set of passing tests that successfully pass in the original codebase. However, not all of those
+passing tests should be considered as regression tests since solving the issue may require
+changing some of the existing functionalities. Therefore, AGENTLESS provides the list of
+passing tests to the LLM and ask it to identify any tests that should not be ran to check
+if the issue has been correctly fixed (i.e., the tests that may be updated/patched during
+issue fixing). After removing the LLM-identified non-regression tests, we obtain a final
+set of regression tests. We then run the set of regression tests on all the generated patches.
+AGENTLESS then keeps the patches with the lowest number of regression failures. For those
+patches, AGENTLESS then runs the selected reproduction test and only keeps patches that
+output Issue resolved. Meanwhile, because the reproduction test is generated by the LLM
+and can potentially be incorrect/imprecise, it could be possible that no patch can pass the
+reproduction test; in that case, AGENTLESS will fall back on only using the regression test
+results for selection. AGENTLESS then applies a re-ranking approach using majority voting:
+We first normalize each patch to ignore surface-level differences (e.g., extra spaces, newlines,
+and comments), and then select the patch with the highest number of occurrences as the
+final patch for submission. More specifically, to standardize the patch, we begin by parsing
+both the old and new code (after applying the patch) into abstract syntax trees. Next, we
+unparse the trees into a canonical source code format with docstrings removed. Finally, we
+compute the textual diff between the standardized old and new code to get the normalized
+patch.
+AGENTLESS solves repository-level issues using a simple step-by-step procedure. We note
+here that none of the techniques used by AGENTLESS in isolation are revolutionary, but in-
+stead AGENTLESS smartly combines existing techniques to construct an easy-to-understand
+approach. Different from prior autonomous agent-based tools that involve complex interac-
+tions with the environment, AGENTLESS uses a simplistic three-phase approach to localize,
+repair, and validate without relying on any agents for decision-making. By conducting
+localization in a hierarchical manner, AGENTLESS can efficiently and effectively compute the
+fine-grained locations for editing. AGENTLESS then performs repair by sampling multiple
+patches using a simple diff format. AGENTLESS’s patch validation approach can further aid
+the patch selection process by producing reproduction tests that can help verify if the issue
+is fixed.

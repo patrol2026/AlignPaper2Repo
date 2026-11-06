@@ -1,0 +1,266 @@
+In this section, we introduce our tool HYPERION, which is
+capable of detecting the seven types of inconsistencies defined
+above by analyzing DApp descriptions and smart contracts.
+A. Overview
+Figure 8 shows an overview of the HYPERION, which
+has three components, namely Description Analysis, Contract
+Semantic Analysis, and Inconsistency Detection.
+The input of HYPERION contains two parts, i.e., front-end
+description (can be a DApp URL, HTML, or text) and back-end
+contract code.
+For Description Analysis, the DApp descriptions are first
+parsed as raw text, and then concatenated with our designed
+prompts through HYPERTEXT, which is obtained by LLaMA2
+instruction-tuning (see Section IV-B1). Next, NLTK is em-
+ployed to extract inconsistency-related attributes from the
+output of HYPERTEXT (LLM responses), which are used for
+further comparison with the contract semantics.
+In Contract Semantic Analysis, HYPERCODE first decom-
+piles the contract bytecode using Elipmoc [51], to recover
+the CFG and the contract IR. HYPERCODE then performs
+dataflow analysis on this IR to extract inconsistency-related
+semantics, such as fund transfers. This analysis includes
+constructing fund transfer and storage variable dependency
+graphs that guide targeted symbolic execution on the IR
+to trace inconsistency-related paths. Furthermore, the SMT
+solver validates program states collaborated with on-chain state
+extraction, thus identifying contract semantics.
+Finally, in Inconsistency Detection, HYPERION incorporates
+the attributes extracted from DApp descriptions and contract
+semantics to identify inconsistencies based on defined rules.
+B. LLM-based DApp Description Analysis
+In this subsection, we give details of how we extract attributes
+related to inconsistencies from the DApp description.
+1) Instruction-Tuning: In this part, We introduce the process
+of obtaining our HYPERTEXT model. We adopt LLaMA2 as our
+base model due to its adaptability, cost-free access, and excel-
+lent performance in natural language tasks (see Section II-B).
+To make LLaMA2 perform well in our downstream DApp
+description analysis task, we propose an instruction-tuning
+approach, as depicted in Figure 9. Specifically, after we obtain
+the raw text of the description, (1) we first design specific
+prompts to improve the model’s efficacy in yielding the specific
+desired attributes we want to extract. (2) Next, we adopt a
+prompt segmentation method to fix issues caused by long input.
+(3) Then, we perform instruction tuning with manually labeled
+DApp descriptions and finally get our model HYPERTEXT.
+Prompt Design. LLMs operate on a prompt-based learning
+approach [52], with prompt design crucially impacting per-
+formance [12]. We adopt LLaMA2’s recommended prompt
+structure [53], comprising a system prompt (SP ) and a user
+prompt (U P ). SP defines the model’s role R, e.g., requiring
+the model to act as a “smart contract expert” and includes
+general instructions GI to ensure accuracy, e.g., requiring
+the model to “avoid sharing false information”. The user
+prompt U P is divided into U Pit and chain of thought [13]
+(U PCoT ) components. Specifically, U Pit directs LLM to
+analyze and extract specific kinds of inconsistency-related
+information types, i.e., numeric and boolean. Figure 10 and
+Figure 11 show the prompt templates for extracting numeric
+and boolean inconsistency-related information, respectively.
+For generating numeric values like rewards or fee rates,
+the prompt directly instructs the LLM to ‘extract numeric
+values from the provided DApp description’. However, when
+generating boolean values, which are not explicitly stated
+in the description, the prompt does more than just instruct
+the LLM to ‘answer with yes or no.’ It also utilizes CoT
+(Chain of Thought) patterns to construct U PCoT , which guide
+the LLM in deducing the answer by providing key phrase
+explanations (e.g., DApp pause, the storage way of NFTs) and
+illustrative examples. This approach helps the LLM interpret
+Prompt Segmentation. The maximum number of tokens
+that LLaMA2 can process in a single prompt is 4096 [11].
+However, the token length of some DApp descriptions in our
+dataset exceeds this limit, which yields incorrect answers
+and unwanted output. To address this issue, we segment
+the raw text of the DApp description D by setting a token
+limit. Every segmentation Di is further concatenated with
+the design prompt SP and U P to construct the prompt
+Pi. Through experimentation, we find that a limit of 3000
+tokens per segmentation yields the best results (compared to
+500, 1000, 1500, 2000, and 4000). This choice effectively
+handles lengthy descriptions without significantly impacting
+LLM’s comprehension abilities. Although segmentation can
+result in incomplete sentences, LLMs are skilled in contextual
+understanding, which allows them to interpret meaning and
+maintain coherence with fragmented input, preserving their
+overall comprehension and effectiveness.
+Instruction-Tuning. To enhance LLaMA2’s effectiveness for
+our specific task, we further instruction-tune the model using
+labeled data on 63 DApp inconsistencies [20]. Specifically, we
+first segment the raw text of the DApp descriptions, adhering
+to the 3000 tokens per segmentation, and then construct the
+LLaMA2 instruction according to our designed prompts P
+for every segmentation. However, this step yields some wrong
+responses and useless information, e.g., multiple lines of empty
+spaces without any text. To refine LLaMA2’s responses, we
+remove redundant words while only retaining outputs that
+contain the relevant information, and correct any inaccuracies.
+The revised responses form the basis of our training dataset,
+which aligns with the structure of the alpha dataset, as defined
+by the LLaMA2 official fine-tuning project [54]. The format can
+be represented by the tuple (instruction, input, output), where
+instruction refers to the user prompt U P , input represents
+DApp description raw text D, and output denotes the adjusted
+LLaMA2 response. After that, we adopt LORA [55], a famous
+PEFT (Parameter-Efficient Fine-Tuning) [56] method, to train
+the learnable parameters for our inconsistency information
+extraction task based on our training dataset. The above process
+achieves an 84% precision on our test dataset comprising
+54 labeled DApp descriptions (Section III-B), and we finally
+obtain our model HYPERTEXT. Due to page limitation, we
+provide a detailed fine-tuning process in our open repository.
+2) Inconsistency-related Attributes Extraction: The output
+generated by HYPERTEXT comprises several sentences assess-
+ing the presence of inconsistency-related information within
+the DApp descriptions. However, these outputs vary in format,
+necessitating the extraction of uniformly formatted key-value
+attributes for further comparison with the contract semantics.
+In our experiments, we find that directly extracting key-
+value attributes using LLM is inefficient and often inaccurate.
+To address this challenge, we employ the NLTK to extract
+inconsistency-related information from LLM answers and unify
+them into the key-value format attributes. For instance, (1) to
+find the reward rate from HyperText’s answer, we first tokenize
+the sentences and use POS tagging to label the words. Then, we
+scan for keywords like "reward" and its synonyms extended by
+NLTK WordNet. The final result is located around the keyword,
+and we obtain the numeric value based on the digit word tag
+and symbol ‘%’. (2) It is straightforward to extract the ‘yes’
+or ‘no’ boolean symbols from HypetText’s answers, as shown
+in the template (Figure 11). We directly extract the boolean
+value from the LLM response.
+C. Contract Semantic Analysis
+This subsection details how HYPERCODE recovers high-
+level semantic features related to inconsistencies from low-
+level bytecode. The analysis can be divided into three parts,
+i.e., decompilation and dataflow analysis, graph analysis, and
+IR-based symbolic execution.
+1) Decompilation and Dataflow Analysis: For contract
+bytecode analysis, we utilize Elipmoc for decompilation.
+Elipmoc converts EVM bytecode into a high-level IR, structured
+in static single assignment (SSA) form, and delineates function
+borders. Utilizing this IR, we perform dataflow analysis with
+datalog [57] rules to extract essential semantics for subsequent
+graph analysis and symbolic execution. This includes defining
+core IRs related to storage, external calls, and data flow.
+Instruction :- SST ORE(s, y, z) | x := SLOAD(s, y)
+| CALL(s, arg)
+| x := CALLP RIV AT E(pf, arg)
+| RET U RN P RIV AT E(t, v)
+| x := P HI(y, z)
+Letters (x,y,z,t,v) denote the variables declared in the IR.
+The variables pf and arg represent the private function and
+call arguments, respectively, and s denotes the SSA statement
+in which an instruction lies. The semantics of the first three
+instructions are the same as those of the EVM opcodes. The
+storage write instruction SST ORE(s, y, z) signifies that the
+statement s writes variable z to the storage address y. And
+x := SLOAD(s, y) represents the variable x loaded from the
+storage address y in statement s. Instruction CALL(s, arg)
+denotes the statement s executes the external contract invocation
+with arguments arg.
+The final three instructions - unique to Elipmoc IR - pertain
+to dataflow and control flow within the IR. Instructions
+CALLP RIV AT E and RET U RN P RIV AT E are involved
+in private function calls: x := CALLPRIVATE(pf,arg) calls the
+private function pf with arguments arg, and x captures the
+return value. The RETURNPRIVATE(t,v) instruction facilitates
+returning variables v to the caller at target t. Lastly, the x :=
+PHI(y,z) instruction indicates the flow of variables y and z to
+x, playing a pivotal role in dataflow within the IR.
+Based on the instruction semantics above, we summarize the
+high-level semantics in Table II that we adopt to formulate our
+dataflow and semantic recovery rules. The first eight relations
+in the table are supported by Elipmoc, while the remaining
+three rules are induced on the basis of the eight relations, which
+recover a higher-level semantic of contracts. According to the
+definition of the seven DApp inconsistencies, there are three of
+them related to transfer funds (UR, HF, UFF), while the other
+four are about reading and writing storage (AL, UTS, CDS,
+and VNA). Therefore, our analysis primarily revolves around
+two types of operations: fund transfer and specific storage
+access (store and load), crucial for pinpointing inconsistencies
+in contract bytecode.
+The first induced relationship is Transfer, Transfer operations
+are extracted by identifying call operations in the contract
+bytecode. From the collected dataset for finding inconsistencies,
+there are two types of transfers, i.e., Ether and ERC20 token
+transfer. ERC20 token transfers are identified through the
+function signatures mandated by the ERC20 standard: trans-
+fer() and transferFrom(), with respective function signatures
+0xa9059cbb and 0x23b872dd [58]. In contrast, Ether transfers
+are characterized by those CALL operations, which uniquely
+do not utilize memory arguments for the call target and
+transfer amount, referring to the CALL instruction semantics [3].
+HYPERCODE identifies these transfer operations and uses
+rules 1 to 3 to determine the critical call sites in the IR.
+The second induced relationship is SenderGuard, which
+helps us analyze whether some operations are restricted to
+specific users, e.g., check whether the function caller is the
+owner. This relationship is induced by the following rule 4.
+When a statement s retrieves variable x from storage slot y
+and subsequently compares x with the function’s caller, we
+can deduce that function cf incorporates a sender verification
+mechanism. This process helps us to identify privileged users
+within the contract.
+The other key induction StorageInfer is to recover semantics
+about storage inference. Our approach involves deducing five
+distinct types of storage variables from the IR by identifying
+characteristic features of storage operations. These types in-
+clude: owner, time, supply, pause, and token URI. Recognizing
+these variables is essential for pinpointing operations that
+interact with inconsistency-related variables. For example,
+to determine the storage slot for the owner variable that
+represents the contract owner or privileged users, we utilize
+rule 5. If a contract implements the function F-owner() with a
+specific signature SHA3(F ), we infer that the return variable
+loaded from slot y is indicative of the owner variable. In
+scenarios where owner() is not explicitly defined, we resort to
+pattern matching based on the SenderGuard (SG) induction.
+Specifically, a variable loaded from slot y and compared with
+the CALLER indicates the owner variable is stored in slot y.
+In our approach, the identification of function signatures
+is a critical step. We refer to standard interfaces defined in
+Ethereum Improvement Proposals [59] (EIPs) and utilize widely
+recognized third-party libraries, such as OpenZeppelin [60].
+This technique allows us to quickly locate critical variables
+in the contract’s bytecode, which is also adopted by other
+works [58]. We use this method to find the storage of variables
+that represent the token supply (e.g., totalSupply()), the DApp
+pause status (e.g., pause()), and the token uri (e.g., tokenURI())
+of the NFT from contract bytecode as shown in rule 6. For
+contracts lacking these standard function implementations, our
+strategy involves a detailed analysis of operational sequences
+and constraints in the bytecode. We have crafted specific
+patterns based on source code level features, derived from
+our ground truth dataset for defining inconsistencies. These
+patterns facilitate the identification of storage locations by
+extracting unique features and constraints within the bytecode.
+The rules from 7 to 9 outline our variable semantic recovery
+patterns. For example, rule 7 is employed to identify the state
+variable storing the DApp’s liquidity lock duration. We ascertain
+whether the arguments of a public function x, combined with
+the current timestamp (derived from TIMESTAMP), flow to
+a variable z, stored in slot y. Represented semantically as
+lock=now+x, where x is user-defined lock time, and now
+is the current timestamp, slot y is inferred to store the lock
+time. Likewise, we look for the ADD operations (rule 8) and
+the control semantics (rule 9) to infer the storage of the token
+supply and the pause variable, respectively. Due to the page
+limit, please refer to our repository for more details.
+D. Inconsistency Detection
+To detect the inconsistencies, the frontend analysis yields
+key-value information for critical attributes, e.g., fee rate. The
+backend analysis maps these attributes to key variables (e.g.,
+transfer recipient and amount, token uri) and operations (e.g.,
+ether/token transfer, contract states modification) that are iden-
+tified using induction rules and graph analysis during symbolic
+execution. Specifically, the attributes extracted by HYPERTEXT
+are denoted as F, with each attribute Af assigned a numeric
+(n) or boolean (b) value V , based on the inconsistency type.
+For contract semantics, HYPERCODE identifies attributes Ab
+and their values V , as well as expressions Fexpr from symbolic
+execution (SE).
+V ∈n|b
+F : {Af : V }, V 

@@ -1,0 +1,142 @@
+In this section, we introduce COSIL, an LLM-driven issue
+localization framework. As shown in Figure 2, COSIL takes
+an issue description and a repository structure tree extracted
+from the original code repository as inputs and returns a
+recommendation list containing the signatures of the most
+suspicious functions. It consists of two stages, i.e., module
+call graph enhanced search space reduction at the file level and
+iterative function call graph searching at the function level.
+To ensure that the search space is not limited and avoid an
+overly broad scope that includes the entire repository, COSIL
+expands the search space from the modules mentioned in the
+issue description to imported modules by providing the LLM
+with the module call graph during the file-level stage (Section
+III-A1). To collect context and perform an in-depth search,
+COSIL uses a specifically designed search tool to iteratively
+explore the function call graph at the function-level stage
+(Section III-A2). Additionally, to achieve a balance between
+context length and the density of relevant information, COSIL
+utilizes a pruning mechanism to control the search direction
+and prevent irrelevant context from being retrieved (Section
+III-B). To enhance the LLM’s ability to produce formatted out-
+puts when interacting with the external environment, COSIL
+leverages reflection at the end of each stage, thereby alleviating
+parsing errors in the final results (Section III-C).
+A. Localization with Call Graph
+1) Module Call Graph Enhanced Search Space Reduction:
+This stage takes the repository structure tree as input and
+returns a list of suspicious files as the search space. Because of
+the limited context window size of LLMs, directly providing
+the code in all files to the model is often infeasible. Inspired
+by previous studies [9], [13], we recursively traverse the entire
+repository and parse it into a hierarchical repository-structure
+tree representation. Considering that most issue reports contain
+information about candidate suspicious locations [25], we
+query LLM with the issue description to pre-select the related
+files The prompt template can be found in Appendix-E. Then,
+the “import” statements in the related files are parsed to
+construct a first-order subgraph of the module call graph,
+which starts from the related files. Such a subgraph is then
+converted into structured textual representations, as shown in
+Figure 3. Next, the pre-selected related files, along with the
+repository-structure tree and the module call graph, are fed into
+the LLM for search space expansion, enabling the reselection
+and reranking of the suspicious files. The rationale behind not
+utilizing the entire module call graph is that the repository-
+structure tree already provides a comprehensive view of the
+repository.
+2) Iterative Function Call Graph Searching: This stage
+takes the file-level search space as input and returns a list of
+suspicious functions. Specifically, it consists of the following
+three steps. (Detailed algorithm is in Appendix-B)
+Step I: Initialize the search state. This step aims to
+preliminarily determine one or several starting points for the
+search. Specifically, similar to the repository-structure tree
+described in Section III-A1, we construct a file-structure tree
+for all suspicious files, outlining all classes, member functions,
+and static functions within these files in a hierarchical format.
+Then we provide the issue description along with this file-
+structure tree as inputs to query the LLM to return selected
+points.
+Step II: Iterative search contexts. This step aims to
+collect contextual information for locating suspicious func-
+tions. First, we construct a search agent by equipping the
+LLM with retrieval tools as shown in Table I and a pruner
+agent (detailed in Section III-B) by providing a function code
+snippet and asking for a boolean flag indicating if the code
+snippet should be used as context. Then, we set a maximum
+number of iterations to prevent the search agent from falling
+into an infinite loop. During each iteration step, the search
+agent first selects a target node from the set of accessible
+nodes (denoted as visableN odes) for exploration according
+to the issue description and the visited nodes (denoted as
+contextN odes). The target node could refer to a class, a class
+member function, or a static function. Depending on the type
+of the target node, the search agent invokes different search
+tools shown in Table I to retrieve node content. Next, the
+retrieved code will be verified by the pruner agent, which
+determines whether the target node is acceptable. Once the
+target node is confirmed and accepted by the pruner agent
+into contextN odes, its neighbor nodes within the function call
+graph become accessible and are added to the visableN odes
+for selection in subsequent iterations. Notably, if the search
+agent returns an incorrect function-call parameter, i.e., the
+search agent would like to retrieve non-existent code elements,
+a post-processing procedure will prompt the search agent to
+reselect the node from the accessible nodes for exploration.
+Additionally, if the search agent invokes the "exit" tool,
+which means that sufficient information has been collected
+to support a decision, the iteration process will be terminated
+prematurely.
+Step III: Summarize the suspicious functions. This step
+aims to select and rerank a set of the most suspicious functions
+or classes from the context nodes generated by Step II. Specifi-
+cally, the search agent incorporates the retrieved code snippets
+from relevant context nodes into a summarization prompt as
+the background knowledge for in-context learning. Then, LLM
+returns a list of suspicious functions as localization results.
+The summarized function-level localization information can
+either be utilized for further fine-grained line-level localization
+or provided as contextual input to the LLM for subsequent
+program repair directly.
+B. Context Management with Pruning
+This component takes the issue description and code snippet
+to be explored by the search agent as input and returns a
+boolean flag indicating whether the node should be accepted.
+Specifically, when LLM selects a target node, the code snippet
+of the node is used as context to construct a prompt that
+instructs the LLM to analyze whether the node is related to
+the issue being addressed, and the LLM is asked to return
+a boolean value. If the pruner agent returns a “True” flag to
+accept this node as part of the context, its neighboring nodes
+will subsequently be expanded. Otherwise, the pruner directly
+rejects the expansion and excludes the node from the context,
+effectively pruning the search path.
+By pruning the search path, COSIL effectively guides the
+search direction, encouraging the LLM to explore suspicious
+functions to avoid getting stuck in local optima. Simultane-
+ously, it enables efficient context management, preventing the
+agent from collecting excessive redundant information, which
+might lead to erroneous decision-making.
+C. Reflective Alignment
+This component takes the last returned response by the LLM
+in Section III-A1 and Section III-A2 to rerank and reformat the
+output. It acts as a verifier to guard against incorrect interaction
+formats in long-context scenarios [18].
+Specifically, we maintain a message list to record each query
+and response during interactions with the LLM, and collect
+context through multiple queries. Since COSIL requires the
+LLM to summarize the suspicious locations in the final query
+round (Section III-A1 and III-A2), the last response in the
+message list should contain the LLM’s decision information.
+Reflective Alignment takes the issue description together with
+the last response containing decision information as context,
+and prompts the LLM to rerank and reformat the candidate
+locations given in the decision information to obtain the
+final localization result. The detailed prompt can be found in
+Appendix-E. Reflective Alignment is applied at the end of both
+file-level and function-level localization, significantly reducing
+localization failures caused by unstructured or improperly for-
+matted outputs. It also retains the advantages of the reflection
+reasoning strategy [19], and thus can correct and rerank the
+localization results.

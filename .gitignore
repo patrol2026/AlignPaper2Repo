@@ -1,0 +1,24 @@
+node_modules/
+claude_test/
+codesearch/
+llama_test/
+out/
+resources/
+results/
+rq2_3/
+test/
+emb_indices/
+AlignPaper2Repo-0.1.0.vsix
+paper-repo-qa-0.1.0.vsix
+rq2_3.zip
+
+dataset_2.csv
+dataset_hf.csv
+dataset - Sheet1 (2).csv
+dataset_part.csv
+llama_copy_copy.csv
+*.vsix
+
+.DS_Store
+**/.DS_Store
+.vscodeignore

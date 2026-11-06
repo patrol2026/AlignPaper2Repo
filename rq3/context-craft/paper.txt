@@ -1,0 +1,168 @@
+For a given functional description (𝑓 𝑑), example retrieval is to retrieve a few closely related exam-
+ples from a predefined corpus. The key of the retrieval is the measurement of contextual similarity
+between the query (i.e., 𝑓 𝑑) and the examples in the corpus. Notably, every example 𝑒 in the corpus
+comprises two parts: The functional description of a method (denoted as 𝐷(𝑒)) and the name of the
+method (denoted as 𝑁 (𝑒)). While computing the similarity between 𝑓 𝑑 and 𝑒, we only compare
+𝐷(𝑒) against 𝑓 𝑑 because both are functional descriptions:
+𝑆(𝑓 𝑑, 𝑒) = 𝑇 𝑆(𝑓 𝑑, 𝐷(𝑒)) (1)
+where 𝑆(𝑓 𝑑, 𝑒) is the similarity between the input query 𝑓 𝑑 and the example 𝑒 from the corpus.
+𝑇 𝑆(𝑓 𝑑, 𝐷(𝑒)) is the text similarity between two functional descriptions 𝑓 𝑑 and 𝐷(𝑒). The Text
+similarity is computed using cosine similarity between vector representations of 𝑓 𝑑 and 𝐷(𝑒) as
+follows:
+𝑇 𝑆(𝑓 𝑑, 𝐷(𝑒)) = cos(𝑣 𝑒𝑐(𝑓 𝑑), 𝑣 𝑒𝑐(𝐷(𝑒)))
+𝑣 𝑒𝑐(𝑓 𝑑) ⋅ 𝑣 𝑒𝑐(𝐷(𝑒))
+(2)
+=
+‖𝑣 𝑒𝑐(𝑓 𝑑)‖‖𝑣 𝑒𝑐(𝐷(𝑒))‖
+where 𝑣 𝑒𝑐(𝑓 𝑑) and 𝑣 𝑒𝑐(𝐷(𝑒)) are the vector representations of 𝑓 𝑑 and 𝐷(𝑒), respectively. “‖‖” de-
+notes the magnitude of the vectors and “⋅” denotes the dot product. To compute the similarity
+between 𝑓 𝑑 and 𝐷(𝑒), we convert the tokens into fixed-length vectors using different embedding
+models, including text-embedding-ada-003 [39], All-mpnet-base-v2 [43], GraphCodeBERT [27],
+CodeBERT [20], and RoBERTa [35]. We individually evaluate these models to determine which
+improves the overall results of ContextCraft, as detailed in Section 3.5. The retrieved examples
+are leveraged to generate context-rich prompts. To account for the limited context window size
+of LLMs, we limit retrieved examples to the top ten based on similarity, as using more examples
+increases prompt length. However, the setting is subject to the changes of employed LLMs.
+
+2.3 Probabilistic Token Positioning (PTP)
+Method names are concise, so only a subset of tokens from the functional description is used
+in the method names. Consequently, it would be beneficial to know how likely a token in func-
+tional descriptions may appear in the corresponding method names. Method names follow pat-
+terns; therefore, the probability of a token appearing in a specific position (prefix, infix, or suffix)
+varies. Consequently, we compute how likely a given token (from functional descriptions) would
+appear in different positions of method names to model such position-specific probability. Details
+of the process are presented in the following paragraphs.
+We retrieve all texts from the given corpus of examples (i.e., pairs of <functional description,
+method name>) and decompose them into token sequences. Functional descriptions are split by
+whitespace or punctuation, and method names are split by camelCase or underscores based on
+programming language.
+For each unique token, we calculate its likelihood of appearing as a prefix, infix, or suffix in
+the method name from the training dataset (detailed in Section 3.3). The probability is defined and
+computed as follows:
+• Prefix probability, noted as 𝑃prefix(𝑡), represents the likelihood of a given token 𝑡 (from a func-
+tional description) appearing as the first token in the training dataset’s method names and also
+existing in their functional descriptions:
+𝑃prefix(𝑡) = Occurrences of 𝑡 as prefixes of names
+Occurrences of 𝑡 in descriptions (3)
+• Infix probability, noted as 𝑃infix(𝑡), represents the likelihood of a given token 𝑡 appearing in
+the middle part of the method names:
+𝑃infix(𝑡) = Occurrences of 𝑡 in the middle of names
+Occurrences of 𝑡 in descriptions (4)
+• Suffix probability, noted as 𝑃suffix(𝑡), represents the likelihood of a given token 𝑡 appearing as
+the last token of the method names:
+𝑃suffix(𝑡) = Occurrences of 𝑡 as suffixes of names
+Occurrences of 𝑡 in descriptions (5)
+With the preceding computation, we create a mapping of 𝑀 ∶ 𝑡 →< 𝑃prefix(𝑡), 𝑃infix(𝑡), 𝑃suffix(𝑡) >
+that maps each unique token in functional descriptions into a sequence of probabilities. With the
+mapping 𝑀, we rank the unique tokens in the functional descriptions of the selected best examples.
+The ranking is presented in Algorithm 1. This algorithm takes the 𝑏𝑒𝑠𝑡𝐸𝑥𝑎𝑚𝑝𝑙𝑒𝑠 as input. On line 2,
+it initializes the 𝑃𝑇 𝑃, which will be returned as the final output. The algorithm enumerates each ele-
+ment in 𝑏𝑒𝑠𝑡𝐸𝑥𝑎𝑚𝑝𝑙𝑒𝑠 with another procedure 𝑅𝑎𝑛𝑘𝑖𝑛𝑔4𝑆𝑖𝑛𝑔𝑙𝑒𝐸𝑥𝑎𝑚𝑝𝑙𝑒 (Lines 3–4). This procedure
+initializes a sequence of variables (Lines 10–15) that should be returned. The algorithm retrieves
+a list of unique tokens, 𝑑𝑒𝑠𝑐𝑇 𝑜𝑘𝑒𝑛𝐿𝑖𝑠𝑡, from the description in the given example on line 16. FOR
+iteration on lines 17–31 is the major body of the algorithm, where each iteration handles a unique
+token in 𝑑𝑒𝑠𝑐𝑇 𝑜𝑘𝑒𝑛𝐿𝑖𝑠𝑡. Line 18 calculates the prefix, infix and suffix probabilities of the 𝑡𝑜𝑘𝑒𝑛 from
+the training dataset. Line 19 compares the prefix probability of the token, i.e., 𝑃prefix(𝑡𝑜𝑘𝑒𝑛) against
+𝑚𝑎𝑥𝑃𝑟𝑒𝑓 𝑖𝑥𝑃𝑟𝑜𝑏𝑎𝑏𝑖𝑙𝑖𝑡𝑦 , to validate whether its prefix probability is greater than any of the enumer-
+ated tokens. If yes, the algorithm temporarily marks it as the to-be-returned token by assigning it
+to 𝑚𝑎𝑥𝑃𝑟𝑒𝑓 𝑖𝑥𝑃𝑟𝑜𝑏𝑎𝑏𝑖𝑙𝑖𝑡𝑦 on line 20. It also records its prefix token by assigning it to the variable
+𝑃𝑟𝑒𝑓 𝑖𝑥 on line 21. The IF statement on lines 23-26 validates whether the current 𝑡𝑜𝑘𝑒𝑛 has the
+maximal infix probability in the same way, whereas the validation of maximal suffix probability is
+accomplished by the IF statement on lines 27-30. Finally, on line 32, the algorithm returns three
+tokens (i.e., 𝑃𝑟𝑒𝑓 𝑖𝑥, 𝐼 𝑛𝑓 𝑖𝑥, and 𝑆𝑢𝑓 𝑓 𝑖𝑥) with the greatest probability of appearing as the method
+name’s prefix, infix, and suffix, respectively. It also returns the corresponding probability scores.
+This output is appended to 𝑃𝑇 𝑃 on line 5, and the resulting 𝑃𝑇 𝑃 is returned as the final output
+after all examples are enumerated by 𝑅𝑎𝑛𝑘𝑖𝑛𝑔4𝑆𝑖𝑛𝑔𝑙𝑒𝐸𝑥𝑎𝑚𝑝𝑙𝑒.
+2.4 Pivot Word Identification (PWI)
+While PTP identifies tokens for direct copying, some functional description words aid in name
+generation without direct copying. We propose a dedicated process called pivot word identification
+(PWI) to identify such valuable words. The rationale of PWI is that if a word (𝑤 ) in the functional
+description is semantically similar to words (𝑛𝑤 ) in the corresponding method name but not an
+exact copy, this word (i.e., 𝑤 ) could be employed by LLMs to generate the associated name tokens
+(i.e., 𝑛𝑤 ).
+Algorithm 2 outlines PWI, which takes best examples as input (i.e., parameter 𝑏𝑒𝑠𝑡𝐸𝑥𝑎𝑚𝑝𝑙𝑒𝑠)
+and returns a list of pivot words (pair of method name’s token and description’s token with their
+similarity score) for each example. First, it initializes the output parameter 𝑃𝑊 𝐼 with an empty set
+on line 2. The primary body of the algorithm is an iteration on each of the examples (i.e., the FOR
+statement on lines 3-16). Each iteration retrieves the tokens in the functional description (Line 4)
+and method name (Line 5). On line 6, initializes 𝑃𝑊 𝐿 as a list of pivot words of an example. The
+nested loop on lines 7 and 8 takes each token of the method name noted as 𝑚𝑡 and of description
+as 𝑑𝑡 and ensure tokens are not the same on line 9. If they are not, the algorithm passes them to a
+function 𝑆𝑖𝑚 on line 10. Using the embedding model, this function calculates the cosine similarity
+between 𝑚𝑡 and 𝑑𝑡 and stores the result in the variable 𝑠𝑖𝑚𝑖𝑙𝑎𝑟𝑖𝑡𝑦 . On line 12, It appends 𝑚𝑡 , 𝑑𝑡 and
+𝑠𝑖𝑚𝑖𝑙𝑎𝑟𝑖𝑡𝑦 into the list 𝑃𝑊 𝐿 if they have a 𝑠𝑖𝑚𝑖𝑙𝑎𝑟𝑖𝑡𝑦 score greater than or equal to 𝑡ℎ𝑟𝑒𝑠ℎ𝑜𝑙𝑑. We
+set a threshold of 0.5 for semantic similarity to achieve a balance between precision and recall,
+ensuring that only moderately similar token pairs are identified while minimizing noise. Once all
+pivot words of an example are appended into 𝑃𝑊 𝐿, it appends the 𝑒𝑥𝑎𝑚𝑝𝑙𝑒 and corresponding
+𝑃𝑊 𝐿 into 𝑃𝑊 𝐼 on line 17 and returns this 𝑃𝑊 𝐼 on line 19. On line 10, the algorithm employs
+𝑠𝑖𝑚𝑖𝑙𝑎𝑟𝑖𝑡𝑦 = Sim(𝑚𝑡 , 𝑑𝑡 ) to calculate the cosine similarity between two tokens 𝑚𝑡 and 𝑑𝑡 . We convert
+the tokens into fixed-length vectors using a text embedding model (i.e.,text-embedding-ada-003,
+OpenAI’s next-generation embedding model at the time of selection [39]) to compute the similarity.
+With the resulting embedding, we measure the similarity between 𝑚𝑡 and 𝑑𝑡 by computing the
+cosine similarity between their corresponding vectors. To demonstrate the application of the PWI,
+there are awesome examples:
+• Example 1: <Functional description: “Persist the user’s configuration preferences to ensure
+changes are not lost.”, Method name:“saveSettings”>
+• Example 2: <Functional description: “Verify if the current user has the authority to access the
+requested resource.”, Method name: “checkAccess” >
+• Example 3: <Functional description: “Create a copy of this object.”, Method name: “clone” >
+For the first example, the semantic similarities between functional descriptions and method names
+reveal notable correlations: the word “save” from the method name “saveSettings” achieves a sim-
+ilarity score of 0.564 with “Persist” from the description as both terms imply the action of data
+maintaining or conserving. Additionally, “settings” matches with “preferences” with a similarity
+score of 0.590, suggesting a strong relation since both terms refer to user-configurable parameters.
+For the second example, the semantic analysis between the functional description and method
+name vividly illustrates the contextual alignment of the terms used: “check” from the method
+name “checkAccess” shows a significant semantic correspondence with “verify” from the descrip-
+tion, achieving a similarity score of 0.623, as both terms are commonly employed to confirm or
+ascertain validity. Furthermore, the word “access” is identically used in both contexts with a simi-
+larity score of 0.580. Notably, the similarity between two occurrences of “access” is not one because
+they have different contexts and thus have different representing vectors.
+For the third example, the semantic similarity analysis reveals a notable connection: “clone” in
+the method name corresponds with “object” from the functional description with a similarity score
+of 0.618. This is logical because “clone” in source code usually refers to the action of creating an
+exact copy of an “object”. This example highlights how semantic similarity analysis can effectively
+establish a connection between a method’s action and its target, even when the direct linguistic
+connection seems obscure (i.e., the two words are not lexically similar).
+2.5 LLM-Based Feedback Mechanism (LFM)
+PTP and PWI focus on token identification, while LFM offers quantitative feedback by evaluating
+LLM performance with the best examples. Unlike token-based processing, the LFM proposed in
+this section tries to help by evaluating the to-be-employed LLM (i.e., ChatGPT-4o as it presents the
+OpenAI’s latest LLM [38]) with the retrieved best examples and providing quantitative feedback
+on the evaluation. For each example, this process works as follows:
+• It feeds the LLM a prompt with a functional description from the example and asks it to
+generate a method name according to the functional description.
+• The LFM compares the name generated by the LLM and the ground truth, i.e., the method
+name in the example. This comparison is based on character-level analysis, calculating the
+edit distance between the generated and the original method name.
+• It generates message 𝑚𝑠𝑔 specifying how the generated names differ from the ground truth.
+We take the following example to illustrate the process:
+Example: <Function description: “casts this class object to represent a subclass of the class repre-
+sented by the specified object.”, Method name: “asSubclass” >. In this example, it requests the model
+to generate a method name with the following prompt:
+“Suggest a Java method name according to the given functional description: casts this
+class object to represent a subclass of the class represented by the specified object.”
+The model generates a method name “castToSubclass”. By comparing it against the ground truth
+(i.e., “asSubclass”), our approach calculates the edit distance score as 4, indicating that there are
+4 single-character edits required to transform “castToSubclass” into “asSubclass”. Consequently, it
+generates the following messages as feedback:
+“The predicted method name by base LLM:‘castToSubclass’ which has an edit distance
+score: 04 as compared to the actual method name: ‘asSubclass’”
+The LFM provides feedback on all retrieved top examples, which is then used in the next process.
+2.6 Template-Based Prompt Generation
+With the outputs from processes introduced in the preceding sections, we gathered all the infor-
+mation to create a context-rich prompt. The prompt is composed of five parts:
+• Best examples retrieved from the corpus (copied from Section 2.1);
+The preceding sections generated the best examples, probabilistic token positioning, pivot words,
+and LLM-based feedback. Together, PTP and PWI offer a balanced prompt where PTP handles
+token positioning and syntactic structure, and PWI ensures semantic relevance, improving overall
+flexibility and effectiveness in method name generation. Additionally, the LFM integrated into the
+prompt addresses inherent divergence in LLM behavior, ensuring that generated method names are
+both relevant and contextually aligned with input descriptions. The query comprises a predefined
+text (i.e., a command to the LLM) and the input of the proposed approach (i.e., the functional
+description). An example of a generated prompt by ContextCraft is presented in Figure 2.
+2.7 LLM-Based Method Name Suggestion
+The automatically generated query is fed into an LLM to generate the method name. In the default
+setting, we employ ChatGPT-4o as the LLM because it presents the state of the art at the time of
+selection. However, as validated in Section 3.7, the proposed approach works well with various
+LLMs, e.g., Gemini-1.5 and Llama-3.

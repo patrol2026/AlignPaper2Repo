@@ -1,0 +1,13 @@
+# core
+numpy>=1.26
+pandas>=2.2
+tqdm>=4.66
+requests>=2.31
+
+# vector search
+faiss-cpu>=1.8.0
+
+
+
+# Optional: load API keys from a .env file
+python-dotenv>=1.0.1

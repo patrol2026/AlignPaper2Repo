@@ -1,0 +1,152 @@
+3.1 Methodology
+3.1.1 Bug Reports Preparation. Our empirical study was conducted on 380 real-world mobile
+app bug reports. To ensure the representativeness of this dataset, we followed the data collection
+practice used by existing research works on mobile app bug report studies [34, 46, 69] and standard
+statistical sampling methods [18]. Specifically, we chose GitHub [23] as the source of mobile bug
+reports due to its popularity in hosting mobile apps and tracking issues. Since our approach focuses
+on analyzing bug reports for mobile apps, we selected repositories hosting apps available on
+FDroid [22], a popular open-source mobile app store, resulting in 3,342 repositories. We then mined
+issues from these GitHub repositories between November 8, 2018, and November 8, 2023. To ensure
+our dataset contained only bug reports, we only retained issues labeled as "bug", excluding feature
+requests and other non-bug-related issues. This resulted in an initial set of 43,390 reports from 755
+repositories. The minimum, median, mean, and maximum number of issues from a single repository
+was 1, 6, 57, and 3,646. Next, to specifically focus on mobile apps, we filtered out reports containing
+the keywords "windows," "linux," or "tv" (in a case-insensitive manner) since some repositories host
+apps for multiple platforms. This filtering reduced our dataset to 39,819 issues. To make the dataset
+manageable for human review while ensuring statistical validity, we sampled 380 bug reports from
+the dataset, achieving a 95% confidence level with a 5% margin of error [18]. During the sampling,
+to prevent overrepresentation of any single app, we limited each repository to at most ten sampled
+reports following an existing practice [46, 69]. This resulted in a final dataset of 380 bug reports
+from 157 different mobile apps.
+3.1.2 Coding Process. To answer the RQs, two authors conducted a qualitative coding process on
+the bug reports in the dataset. The authors followed the practice of both deductive and inductive
+coding [37] to code the BB descriptions systematically. Deductive coding describes an analysis with
+predefined codes based on past studies or experiences, while inductive coding derives the codes
+from the data. In our study, combining these two approaches helped accelerate the coding process
+by reusing codes from prior studies and discovering new findings by defining new codes. For RQ1,
+we collected common types of mobile app bugs studied by researchers. Specifically, they include: (1)
+UI Display Bugs: Issues that affect UI display [56]; (2) Function bugs: Problems that prevent certain
+functions of the app from working properly [71]; (3) Performance bugs: Bugs that slow down
+the app’s responsiveness or lead to increased energy or memory consumption [53]; (4) Security
+bugs: Vulnerabilities that threaten the security of user information [52]; and (5) Crash bugs: Bugs
+that cause the app to crash unexpectedly [45]. For RQ2, we adopted the information modalities
+concluded by a study on mobile bug report reproductions [46] as the initial codes: Natural Language,
+Image, and Video. For RQ 3 and 4, we did not have initial codes since, to the best of our knowledge,
+no existing work answered these questions. Therefore, we identified and defined their codes during
+the coding process as introduced below.
+The coding process for each RQ was conducted in an iterative manner. Specifically, at each round,
+each coder independently analyzed 50 bug reports and labeled each BB description in the report
+using either one of the existing codes or a new code if none of the existing codes fit. After each
+round of independent coding, the two authors met and discussed their coding results. This meeting
+aimed to resolve the conflicts in their coding and discuss the new codes. When the two authors
+could not agree, a third author was involved to resolve the disagreement. After the discussion, the
+codebook was updated with the new codes and used in the following coding round. The iterative
+coding and discussion process continued for four rounds. After the fourth round, no new codes
+were generated during the independent coding process. Then, the two coders used the codebook
+to code the rest of the bug reports. In the end, two coders merged their codings and resolved any
+conflicts by discussion.
+We measured the Inter-Coder Agreement (ICA) on the independent codings to evaluate the
+reliability of the coding results. The Krippendorff’s alpha (𝛼) [48] coefficient was used for this
+evaluation. Our analysis revealed high ICA on the overall codings (𝛼 = 81%, i.e., Substantial
+Agreement [64]). Specifically, the coders agreed on codings for RQ1 to RQ4 with corresponding 𝛼
+to be 91%, 94%, 92%, and 78%.
+3.2 Empirical Study Findings
+3.2.1 RQ1: Types of Mobile App Bugs. Among the 380 reports, we identified 71 Crash bug reports
+(18.7%); 159 Function bug reports (41.8%); 11 Performance bug reports (3%); 65 UI Display bug
+reports (17%); and 1 Security bug report (0.3%). The remaining 73 (19%) reports were found not to
+be bug reports for mobile apps. This finding showed that the bug reports selected in our dataset
+include various types of bugs for mobile apps. Please note that reports identified not as a bug
+report for a mobile app were excluded from the coding process in RQ2-4. However, they were
+included in the total count of bug reports for the statistics presented in these RQs.
+3.2.2 RQ2: Modality of BB Description. Our study identified three information modalities for
+describing BBs: natural language, videos, and screenshots, with natural language being the most
+commonly used. Specifically, our study found that 298 reports (78%) used natural language when
+describing the BB, 72 reports (20%) used images, and 18 reports (5%) used videos. Note that the
+sum of these percentages is larger than 100% since a bug report may have several BB descriptions.
+Among the reports with natural language BB descriptions, 70% of bug reports described BB only
+in natural language, and 30% of reports provided videos or screenshots as additional information.
+Only one report provided only screenshots or videos when describing the BB.
+3.2.3 RQ3: Location of BB Description. Our study showed that BB was described in various locations
+in a bug report. Specifically, we found that 290 bug reports (76%) provided the BB description in
+the report body, 119 reports (31%) described BB in the title, and 21 reports (5%) described the BB in
+the comments of the report. Again, the sum of these percentages is larger than 100% since a bug
+report may have several BB descriptions. For the 290 reports documenting the BB in the report
+body, we found that 183 (63%) report bodies followed a structured template, while 107 (37%) were
+free-form text. Generally, the report template specified a section for documenting the BB. However,
+we observed that in many cases, reporters did not strictly follow the template and mixed the BB
+description with other information. For example, we found that 20% of the reports described the
+BB in the “Reproduction Step” section instead of the “Buggy Behavior” section.
+3.2.4 RQ4: Manifestation of BB. Our study found that although the bug reports described different
+types of bugs (as categorized in RQ1), their manifestation on the mobile device shared common
+characteristics. In total, we found four common manifestations (Ms), and each of them was further
+divided into sub-categories.
+M1. Cause App Crash (16%≈62/380) Bug reports in this category described the BB as causing a
+crash on the mobile app. Generally, such a bug triggered the default crash handler in the OS system,
+which displayed a dialog window on the UI saying “xx has stopped” [21].
+M2. Affect UI Widget Status (40%≈153/380) Bug reports in this category described the BB as
+affecting the display of UI widgets. We further divided this category into Display Abnormal Widget
+and Conceal Widget.
+(1) Display Abnormal Widget (114/153): This manifestation describes a case where the bug caused
+a UI widget with certain abnormal characteristics to display on the UI. We found reporters described
+the displayed widget in the bug reports from three aspects:
+Text Label (82/114): The most common way reporters described the widget was by using
+the text label that appeared on the UI widget. Under this category, we observed that 63%
+(52/82) of the reports directly mentioned the exact text shown on the UI widget. For example,
+in report nextcloud-android-7602 [14], the reporter described an error message widget by
+saying, “I always retrieve the same error message The built-in media player can not play
+the file.” For the other 37% (30/82) reports, we observed that reporters provided a natural
+language description of the label, which did not exactly match the label text. An example
+of such cases is report AnySoftKeyboard-2825 [13]. The reporter described the abnormal
+display of characters on a widget by saying, “All letters are lowercase.”
+•Icon (28/114): Reporters also described the affected widget by its icon. Among bug reports
+containing such descriptions, we found that most icon descriptions (11/28) were related to
+the widget type. For example, in report msoultanidis-quillnote-46, the reporter mentioned
+“the preview was empty, except for a single checkbox.” The reporter directly used the widget
+type, “checkbox” [20], to describe it. Besides the widget type, we found six reports describing
+the icon based on its function, such as the “uninstall button”; eight reports describing the
+color of the icon; and three reports describing the size of the icon.
+•Status (8/114): In eight bug reports, reporters described the status of the displayed widget in
+the BB description. Specifically, the status refers to whether a button is clickable or whether
+a checkbox or radio button is checked. For example, in report unstoppable-wallet-android-
+3763 [29], the developer described a bug that caused a widget to become unclickable by
+saying, “The enabled passphrase is changed to disabled.”.
+(2) Conceal Widget (32/153): In addition to displaying a UI widget, reporters also described the
+effect on a widget as the UI widget disappearing. For example, in report nextcloud-android-8905 [15],
+reporters described the buggy behavior that caused a disappeared widget by saying, “No media
+controls to be found”.
+M3. Cause Abnormal Relation between Two UI States 
+(13%≈50/380) Bug reports in this
+category described the BB as causing unusual relationships between two UI states. Among such bug
+reports, we found two common relationships: Identical Screens (20/50) and In-screen Widget Changes
+(18/50). The first relation, Identical Screens, describes two given UI states that are the same. For
+instance, in report streetcomplete-2410, the reporter mentioned “Nothing happens”. This implies
+that the UI remained the same before and after the last reproduction step. The second relationship,
+In-screen Widget Changes, describes the changes or persistence of widgets on two given UI states.
+In 12 reports, reporters mentioned certain widgets stay on the UI after a UI action. An example of
+such a case is deltachat-android-725[7], where the reporter mentioned, “The notification stays”. In
+six reports, reporters noted that the widget disappeared from the UI after a UI action. For example,
+in report jellyfin-android-459 [12], the reporter mentioned that “The controls disappear”. Note that,
+this manifestation describes a change involving two UI screens, and is different from the “Conceal
+Widget” in M2, which describes the absence of a widget in a single UI screen. We also observed
+other less common UI states relationships. For example, in two bug reports, the reporter described
+a brightness change between two UI states.
+M4. Affect Mobile Device Status (17%≈65/380) The reports in this category described the BBs
+as effects on the mobile device status. In most of the reports in this category (90%), the effect caused
+certain messages to be generated in the device log. Such reports were mostly crash bug reports, as
+classified in RQ1. However, we also observed some non-crash bugs with such BB descriptions. For
+example, in report openhab-android-2583 [26], the reporter provided the device log information
+for a UI display bug. In addition to the device log, we observed bug reports describing effects
+on the mobile device’s audio (6%), volume (2%), and keyboard status (2%). For example, in report
+flex3r-DankChat-66 [25], the bug caused the keyboard to keep displaying even after another button
+was clicked.
+Unclear Manifestation Logic (10%≈38/380) We were not able to classify the BB manifestation
+of bug reports in this category due to insufficient BB descriptions. Specifically, bug reports in this
+category usually described the bugs by directly saying “xxx doesn’t work” or “unable to do xxx”
+(e.g., report Shabinder-SpotiFlyer-764 [27]). Without knowing further details of the app logic and
+the bug information, we could not analyze and classify the BB for these reports.
+Manifestation Co-occurrence Analysis Based on the manifestations concluded above, we analyzed
+the co-occurrence between different manifestations within the same bug report. We found that 16%
+(59 out of 380) of bug reports provided more than one manifestation of the bug. Among them, 58
+bug reports described two manifestations, and one bug report described three manifestations. The
+three most common combinations of the manifestations that we found in the dataset were (1) M1
+and M4, (2) M2 and M4, and (3) M2 and M3.

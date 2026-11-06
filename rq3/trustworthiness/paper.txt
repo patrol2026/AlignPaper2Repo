@@ -1,0 +1,137 @@
+3 TOKI: Trustworthiness Oracle through Keyword Identification
+As outlined in Section 2, a prediction is considered trustworthy if its reasoning is plausible. In text
+classification, a trustworthy prediction should rely on words semantically related to the predicted
+class. We argue that examining the distribution of words helps better recognise these semantically
+related words. Specifically, directly related words can act as anchors, and words indirectly related to
+the class are likely to form clusters around them. Following this intuition, we present Trustworthiness
+Oracle through Keyword Identification (TOKI). The key idea of TOKI is to use a list of keywords
+for each class to indicate what a text classifier should rely on for predictions. To identify these
+keywords, TOKI selects clusters containing directly related words and their surrounding indirectly
+related words. A prediction is then deemed trustworthy if it mainly relies on the keywords of the
+predicted class. While the ultimate goal is to identify a complete list of keywords, this is impractical
+due to resource and computational constraints. Hence, we identify only a partial list of keywords
+by extracting decision-contributing words from the classifier’s responses on the training data and
+applying clustering analysis to them. Since not all decision-contributing words are genuinely related
+to the class, clustering analysis also helps separate related words from unrelated ones. Figure 4
+describes TOKI with two pipelines: keyword identification and trustworthiness label computation.
+3.1 Keyword Identification
+ML models learn correlations in training data, including both valid and spurious ones [Geirhos
+et al. 2020]. Therefore, not all predictions are solely based on the spurious correlations. Predictions
+reflecting the valid correlations rely on words semantically related to the predicted class, regardless
+of their importance scores. While the spurious correlations can make predictions untrustworthy,
+TOKI identifies keywords for each class through the valid correlations, following four steps.
+Step 1: Explaining. To extract keywords, we focus on analysing the reasoning behind correct
+predictions, as incorrect ones might provide meaningless reasoning. Therefore, TOKI identifies the
+decision-contributing words from instances that have been predicted correctly in the training set.
+Let 𝑋, 𝑓(·), and 𝑐 represent the training set, the text classifier, and the true class, respectively. The
+explaining step is formalised in Equation 1, which returns a list of explanations 𝐸𝑐 for each class 𝑐.
+𝐸𝑐 = 𝑒(𝑓,𝑥)|𝑥 ∈𝑋,𝑓(𝑥)= 𝑐 (1)
+TOKI leverages the explanation method 𝑒(·,·)to measure the contribution 𝑠 of each word 𝑤 to a
+prediction. Several methods, such as LIME [Ribeiro et al. 2016], achieve this by locally approximating
+the model as an interpretable surrogate model. Other methods [Li et al. 2016] perturb input and
+evaluate model output changes. Another common way [Mohebbi et al. 2021] is to compute the
+gradient of the output with respect to the input. These methods explain the prediction 𝑓(𝑥)in the
+form of 𝑒(𝑓,𝑥)= {⟨𝑤,𝑠⟩}, a list of top decision-contributing words with their importance scores.
+Step 2: Word pool construction. A word pool of decision-contributing words and their averaged
+importance scores across explanations is created for each class, as formalised in Equation 2.
+Words in the explanations 𝐸𝑐 are categorised based on the predicted class 𝑐, with their importance
+scores averaged. This results in a word pool 𝑊𝑐 = {⟨𝑤,𝑠𝑤⟩}for the class 𝑐, containing words and
+their averaged importance scores. The averaged importance score 𝑠𝑤 also indicates the correlation
+between the word 𝑤 and the class 𝑐.
+Step 3: Word clustering. The word pool 𝑊𝑐 of the class 𝑐contains both keywords and unrelated
+words. To distinguish them and collect both directly related and indirectly related words, TOKI
+clusters the word pool 𝑊𝑐, as formalised in Equation 3.
+𝐶𝑐 = hierarchical_cluster 𝑊𝑐,𝜃dist (3)
+Words in 𝑊𝑐 are transformed into embeddings by embedding methods. As the number of clusters is
+unknown, hierarchical clustering [Nielsen 2016] is applied to group these word embeddings based
+on their cosine similarities. Clusters 𝐶𝑐 of the class 𝑐 are obtained by cutting the dendrogram, a
+hierarchical tree of relationships between the word embeddings, at the threshold distance 𝜃dist.
+Step 4: Keyword selection. The list of keywords is identified by selecting the clusters of words
+semantically related to the class name, as described in Equation 4.
+In TOKI, the word cluster 𝐶𝑖 is directly related to the class 𝑐 if 𝑠𝑖𝑚 𝐶𝑤
+𝑖 ,𝑐 ≥𝜃relate. Here, 𝐶𝑤
+𝑖 is the
+mean vector of all the embeddings of words in 𝐶𝑖, 𝑠𝑖𝑚(·,·)measures the cosine similarity between
+two word embeddings, and 𝜃relate is the threshold relatedness. After this step, the list of keywords
+𝐾𝑐 of the class 𝑐 is identified while the remaining words form a list of non-keywords 𝐹𝑐.
+While 𝜃dist needs manual configuration, 𝜃relate can be automatically estimated by turning it into a
+binary classification problem. The key idea to determine 𝜃relate is that related pairs of words can be
+found via synonyms. To accomplish this, the top 1,000 most common English words are taken from
+WordNet [Miller 1995]. Then, TOKI uses Merriam-Webster Dictionary [2002] to find all single-word
+synonyms of each word, resulting in approximately 32,000 pairs of related words. Another 32,000
+random pairs of words are generated from WordNet to create a list of unrelated pairs. Finally, TOKI
+determines the value of 𝜃relate through a binary search on the word embeddings of these lists. At
+each iteration, all 64,000 pairs are classified, with each pair of words considered as related if the
+cosine similarity between two word embeddings is higher than or equal to the current 𝜃relate. The
+search stops when precision and recall for both related and unrelated classifications are balanced.
+The value of 𝜃relate varies depending on the word embedding method, as different methods have
+their unique ways of embedding, thereby impacting the measurement of similarity between words.
+3.2 Trustworthiness Label Computation
+The second pipeline of TOKI, as highlighted in yellow in Figure 4, focuses on assessing the trustwor-
+thiness of a correct prediction. The trustworthiness label is determined by comparing the impacts
+between related and unrelated decision-contributing words based on their total importance scores.
+To determine whether a decision-contributing word is related to the class, TOKI uses keywords as
+anchors to assess semantic relatedness. We define an indicator function 𝑟(𝑤,𝑐)for this purpose
+by checking whether the nearest word in 𝑊𝑐 to 𝑤 is a keyword, as shown in Equation 5. We then
+formalise the second pipeline in Equation 6.
+TOKI leverages the explanation method 𝑒(·,·)to extract decision-contributing words for the pre-
+diction to the given input 𝑥𝑡. For each word 𝑤, TOKI identifies the most similar word in the word
+pool 𝑊𝑐 of the predicted class 𝑐, which is constructed in the first pipeline, by measuring the cosine
+similarity between their embeddings. The semantic relatedness between each word and the class is
+determined by checking whether the most similar word is a keyword. Next, TOKI computes the total
+importance scores 𝐼𝑆rel and 𝐼𝑆unr for semantically related and unrelated words, respectively. Based
+on the difference between them, the trustworthiness oracle 𝐷 finally assigns a trustworthiness
+label (trustworthy or untrustworthy) to the prediction.
+Word embeddings themselves can be biased due to their training data [Torregrossa et al. 2021],
+potentially affecting the ability to measure semantic relatedness. To mitigate this, TOKI applies
+ensemble learning [Leon et al. 2017] by employing different word embedding methods. We use
+both static embedding methods [Bojanowski et al. 2017; Shazeer et al. 2016], which produce a single
+output for each word and contextual embedding methods [Cer et al. 2018; Devlin et al. 2019], which
+generate different vectors for the same word based on its context. Each method has a different
+way of vectorizing words, resulting in different similarity measurements between them. In the
+first pipeline, this affects the computation of 𝜃relate and the keyword identification. In the second
+pipeline, different embedding methods identify different similar words in the word pool, leading to
+different decisions about how the word is related to the class. Decisions made by all embedding
+methods are combined using plurality voting [Leon et al. 2017] in both pipelines.
+Plurality voting is a simple yet effective voting method where each voter selects a single option,
+and the option with the most votes wins. In the first pipeline, a word receives a vote from an
+embedding method if the method identifies it as a keyword. The word is ultimately classified as
+a keyword if it receives the highest number of votes across all embedding methods. Similarly, in
+the second pipeline, a word is considered related to a class if it is identified as such by the highest
+number of embedding methods in the ensemble.
+4 Targeted Adversarial Attacks on Trustworthiness Vulnerabilities
+We introduce a novel adversarial attack method guided by TOKI. The key idea is to weaken valid
+correlations by replacing words with similar ones that are weakly correlated to the original class,
+while strengthening spurious correlations by injecting unrelated words strongly correlated to other
+classes. Table 1 compares TOKI-guided attack method with existing adversarial attack methods,
+exemplified by the SOTA A2T [Yoo and Qi 2021].
+A2T uses the gradient of the loss to determine the substitution order of words based on their
+importance scores in the prediction. It then iteratively replaces each word with synonyms generated
+from a counter-fitted word embedding model [Mrkšić et al. 2016]. This embedding model is injected
+with antonymy and synonymy constraints into vector space representations to improve its ability to
+assess semantic similarity. For example, traditional word embedding models like GloVe [Pennington
+et al. 2014] consider “expensive” similar to its antonyms, “cheaper” and “inexpensive”. In contrast,
+the counter-fitted word embedding model prefers synonyms like “costly” and “overpriced”. A2T also
+sets a modification rate to constrain the maximum number of perturbations allowed. The generated
+texts are subsequently filtered to ensure part-of-speech consistency and semantic preservation by
+evaluating the cosine similarity between the sentence encodings of the original and perturbed texts.
+A2T has been validated and demonstrated as a strong adversarial attack method [Zhou et al. 2024].
+Our method follows the same architecture as A2T. The key difference is that it finds synonyms
+in word pools 𝑊 constructed by TOKI, based on word-class correlations measured by the averaged
+importance scores 𝑠. To replace a word, TOKI-guided attack method checks whether the word is
+related to the original predicted class. If it is, the word is replaced with a similar keyword of that
+class that has a low importance score. Otherwise, it is replaced with a similar non-keyword from
+other classes that has a high importance score. This mechanism tricks the model into using unrelated
+words as cues for predictions to cause misclassification, increasing the likelihood of successful
+attacks while reducing the number of perturbations.
+Figure 5 compares adversarial examples generated by TOKI and A2T on the same input, showing
+that A2T requires more perturbations to succeed. The text is initially predicted as positive mainly
+based on the words “entertaining” and “unbelievable”. A2T first substitutes “entertaining” with
+“fun”, a synonym identified by the counter-fitted word embedding model. However, this change fails
+to attack the model, as the positive clues “fun” and “unbelievable” still dominate. A2T then replaces
+“unbelievable” with its synonym “extraordinary”. This time, the overall impact of positive clues is
+reduced, allowing the negative clue “awfully” to dominate. A2T substitutes words based only on
+the semantic meaning, requiring two substitutions to create a successful adversarial example. In
+contrast, TOKI-guided attack method replaces “entertaining” with a similar word “humorous”. This
+word is deemed weakly correlated to the positive class by TOKI in this case, allowing the negative
+clues to dominate and alter the prediction with just one substitution.

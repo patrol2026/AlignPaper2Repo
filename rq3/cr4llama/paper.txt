@@ -1,0 +1,168 @@
+In this section, we will detail the methodology for building
+C4RLLaMA. As shown in Fig.1, the process mainly consists
+of: (1) constructing a large model training dataset; (2) defining
+optimization tasks for CCI detection and rectification; and
+(3) implementing C4RLLaMA by using low-parameter fine-
+tuning methods to fine-tune the pre-trained base large language
+model.
+A. Problem statement
+For CCI we adhere to a concept that has been consistently
+employed across multiple studies [11], [14]. The primary aim
+of our research is to harness the power of a large language
+model to understand textual data, which includes both code
+and its corresponding comments. This understanding enables
+us to identify inconsistencies between the two and subse-
+quently amend the comments to rectify these inconsistencies.
+It is important to note that the comments discussed in this
+paper differ from code summarization [42], which is a one-way
+transformation from PL to NL. In contrast, our work involves
+two-way consistency detection, assuming the existence of both
+code and natural language. In many cases, the content of
+comments interspersed within lines of code does not precisely
+reflect the content encapsulated in most code summaries. In
+fact, the code summaries in the dataset [11] used in our study
+represent only one type of comment.
+To facilitate a lucid and precise depiction of our approach,
+we initially define a set of symbols, as illustrated in TABLE
+II.
+B. Constructing the training dataset
+To ensure the validity of comparison with existing studies,
+we also use the dataset widely applied in several studies on the
+CCI topic [11], [14]. Curated from OSS projects, the dataset
+consists of 40688 data items, each of which contains a pair of
+consecutively submitted comments C and code M, denoted as
+(C1,M1),(C2,M2), which includes comment elements such
+as ‘@return’, ‘@param’ and ‘Summary’. Based on an under-
+lying assumption that all consistency issues will be rectified
+promptly, a code change does not cause a consistency problem,
+C1 = C2; conversely, if the change raises a consistency
+problem, C1 ̸= C2.
+However, to match the input data format requirements of
+CodeLLaMA, we need to do some preprocessing of the data.
+First, we consider adopting Chain-of-Thought (COT) in the
+training process. COT has been proven to be effective in
+improving the performances of large language models [43],
+[44]. Its core principle lies in decomposing complex tasks and
+generating results step by step through recursion, thus avoiding
+overly complex reasoning processes. To enable COT, we first
+transform the data using a LLaMA [45] template shown in
+TABLE III. An example of using the template to process the
+original data is shown in TABLE IV, where we present the
+preprocessing results for both the post hoc and the just-in-time
+modes, respectively. We use a zero-shot prompting strategy,
+which is more comparable to the fine-tuning technology, i.e., to
+solve the problems without providing examples. Besides, as we
+want to support both modes of CCI detection and rectification
+at the same time, we need to further process the dataset to
+construct the training dataset. It is important to note that our
+processing of the training data only changes the format of the
+data to cater to CodeLLaMA and adds nothing new to the
+dataset.
+1) Post hoc: Post hoc targets source code and comments
+there is a CCI issue. The task is thus defined as follows:
+first, the code and its comments are analyzed to determine
+whether there is a CCI issue, denoted as (Ins,C,M) →I,I ∈
+{true,false}. Considering the dataset characteristics, we
+chose to use M2 as M and C1 as C as a way to implement the
+judgment of whether the code modification is consistent with
+the original comment. i.e., when C1 = C2, it is determined
+that I= false, meaning there is no CCI issue; conversely,
+when C1 ̸= C2, it is determined that I= true, meaning there
+is one CCI issue. Next, when I= true, a revision to address
+CCI is required, denoted as (Ins,C,M,I) →R. In our dataset,
+the revision result is denoted as R= C2,(C1 ̸= C2). Based
+on the above definition, we have developed Python scripts to
+process the original dataset [11] to construct the dataset for
+CCI detection and revision in post hoc mode.
+2) Just-in-time: Just-in-time targets the code commit sce-
+nario, aiming at detecting CCI issues before the code is
+committed to a repository. The task is defined as fol-
+lows: first, determine whether there is a CCI issue by
+analyzing code changes and their comments, denoted as
+(Ins,C,Diff(Mn,Mn+1)) → I,I ∈ {true,false}. In the
+dataset of this study, we chose to use M1 as Mn, M2 as
+Mn+1, and C1 as C, as a way to implement the determination
+of whether a change triggers CCI issues: when C1 = C2, it
+is determined that I= false, meaning there is no CCI issue;
+conversely, when C1 ̸= C2, it is determined that I= true,
+meaning there is a CCI issue. Next, if there is a CCI issue, i.e.,
+I= true, a revision to the corresponding comment is required,
+denoted as (Ins,C,Diff(Mn,Mn+1),I) →R. For this dataset,
+the revision results in R= C2,(C1 ̸= C2). Similarly, we
+also process the original dataset and construct the dataset for
+training C4RLLaMA in just-in-time mode.
+C. Defining Optimization Tasks
+To enable COT in model training and inference, the tasks
+that come first in the COT significantly affect the results
+of the subsequent tasks [43]. For this, the CCI detection,
+which is essentially a judgment task, may significantly affect
+the performance of subsequent CCI rectification tasks. We
+therefore custom-design a loss function to increase the weight
+of the judgment task to highlight the importance of the
+accuracy of the judgment task, as follows:
+LID = αLI + (1−α)
+n
+logP(xi|x<i)
+i=1
+where α represents the weight of the code-comment consis-
+tency judgment task, usually α takes the value of 0.5, and
+P(xi|x<i) denotes the probability distribution of token xi
+predicted by the model based on the input sequence x<i, which
+is a commonly used method to calculate the loss in fine-tuning
+large models.
+We note that the original dataset [11] has a small number
+of labeling issues, which also have been confirmed by other
+researchers [46]. To mitigate the noise brought by mislabelling,
+we employ the Label Smoothing (LSM) technique [47] and
+define the following sub-loss function for the CCI detection
+task:
+LI = log((1−ϵ)P(I|Ins,C,M) + ϵ
+K)
+where ϵ is the degree of smoothing of categorical labels,
+generally taken as ϵ = 0.1, and P(I|Ins,C,M) denotes the
+probability distribution of judging the consistency of the com-
+ments and code implementation, given the model directives,
+the comments and the code implementation. K is the length
+of the word list of the large language model. The method
+mitigates the data noise problem by preventing the model from
+giving overly deterministic answers to noisy data.
+D. Fine-tuning CodeLLaMA
+Fine-tuning can significantly enhance the ability of large
+language models to solve problems for specific tasks. We also
+use the LLaMA template (as shown in TABLE III) for training
+and inference. Large language models typically have a large
+number of parameters, and fully fine-tuning them tends to
+require significant computational resources [48]. Therefore,
+we adopt a low-parameter fine-tuning strategy to fine-tune
+CodeLLaMA, a highly-regarded model within the open-source
+community. CodeLLaMA is built upon the LLaMA2 model
+[45] and utilizes code data for complementary pre-training,
+which has demonstrated state-of-the-art performance across
+numerous code benchmark evaluations and is used as a base
+model for fine-tuning in a variety of software engineering
+tasks [49], [50]. Specifically, we chose the Lora [51] method
+as the low-parameter fine-tuning scheme for the follow-up
+task. Lora can achieve similar results to full-parameter fine-
+tuning by using only one-thousandth to one-ten-thousandth
+of the original model parameter for fine-tuning. LoRA as-
+sumes that the parameter changes during the fine-tuning phase
+have a low intrinsic rank, allowing the parameter changes to
+be decomposed into the product of low-rank matrices, i.e.,
+W′
+= W0 + ∆W= W0 + BA. Here, W′ represents the
+fine-tuned model parameters, W0 is the set of pre-trained
+model parameters, ∆W is the change in model parameters
+after fine-tuning, B ∈ Rd×r
+, A ∈ Rr×k , with d and k
+being the dimensions of the model parameters, and satisfying
+r ≪ min(d,k). During training, the original pre-trained
+parameter set W0 is frozen and does not participate in gradient
+updates; only B and A are updated. Since the number of
+parameters in the low-rank matrices is much smaller than that
+of the original model matrix, it allows for fine-tuning the large
+model with a minimal number of parameters. To further reduce
+the training cost and improve the convergence speed, we use
+the Lion (EvoLved Sign Momentum) optimizer [52]. The fine-
+tuning of the model was performed on 2 A100 40GB graphics
+cards, training was performed using bf16 precision, and the
+hyperparameters were set as shown in TABLE V.

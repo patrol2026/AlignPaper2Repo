@@ -1,0 +1,170 @@
+Based on our characterization, we propose DESEC (see Fig.
+4 for an overview), a method to extract secrets from Code
+LLMs by guiding the token decoding process with token-level
+features derived from C1, C2, C3, and C4. These features cap-
+ture the characteristics of tokens that help determine whether
+they belong to a real secret. DESEC consists of two stages: (1)
+Offline Token Scoring Model Construction, which utilizes a
+proxy Code LLM to generate training data and train a scoring
+model to predict the likelihood score that a token belongs to a
+real secret; and (2) Online Scoring Model Guided Decoding,
+which leverages the scoring model to predict a score for the
+tokens at each decoding step. The score is then combined with
+the original LLM-predicted probability to reassign the token
+likelihoods, guiding the selection of tokens.
+A. Token-Level Features
+We first define four features for each token during the
+decoding process of Code LLMs, as follows:
+Step Index (step idx): According to C1, real secret tokens
+exhibit distinct probability distributions at different decoding
+steps. To capture this, we use the step index of a token in
+the decoding process as a feature. For example, in Fig. 5, the
+token “2” generated at step 5 has a Step Index of 5.
+Average Probability (avg prob): According to C2, real
+secret tokens generally have higher probabilities than fake
+ones. To capture this while addressing the instability of using
+a single token’s probability, we use the average probability
+of tokens selected in previous decoding steps as a feature.
+Compared with token’s probability sequence, the average prob-
+ability could reduce computational complexity while ensuring
+interpretability (see our replication package [46]). In Fig. 5,
+the probabilities of tokens up to “2” are 0.99, 0.18, 0.03, 0.02,
+and 0.03, with an average of 0.25, which is set as the Average
+Probability for token “2”.
+Probability Advantage (prob adv): According to C3, a to-
+ken’s probability advantage often indicates whether it belongs
+to a real secret. We capture this as a feature by calculating
+the difference between the token’s probability and that of the
+next token in the probability distribution. In Fig. 5, at step 5,
+the probability of token “2” is 0.03, and the next token “DR”
+has a probability of 0.01. Thus, the Probability Advantage for
+token “2” is set to 0.02.
+Entropy Ratio (entp ratio): According to C4, the chang-
+ing trend of Shannon entropy in the predicted sequence during
+decoding can help filter out fake secrets early. We capture this
+by using the ratio of the current step’s entropy to the previous
+step’s entropy as a feature. In Fig. 5, for the token “2” gener-
+ated at the current step, the corresponding string is “SAy2-2”
+with a Shannon entropy of 2.25. The previous step’s string was
+“SAy2-” with a Shannon entropy of 2.32. Thus, the Entropy
+Ratio for token “2” is set to 0.97 (2.25/2.32).
+Feature Vectorization. We form a feature vector for a token
+based on its four features as follows:
+feat= <step idx,avg prob,prob adv,entp ratio>
+For example, the feature vector for the token “2” in Fig. 5
+is:
+feat= <5,0.25,0.02,0.97>
+B. Token Scoring Model Construction
+To combine the four independent features and assess the
+probabilities of tokens belonging to real secrets, we train a
+token scoring model.
+Training Data Construction. We follow a process similar
+to our characterization study setup (Section III-B). We create
+completion prompts for each secret type based on searched
+code files and feed them into a Proxy Code LLM to generate
+candidate secrets. The generated candidates are validated and
+split into a real set Rand a fake set F. During the proxy Code
+LLM’s token decoding process, we extract the feature vector
+feat for each token, resulting in two vector sets: FeatRand
+FeatF, corresponding to Rand F, respectively.
+Scoring Model Training. To effectively distinguish be-
+tween tokens of real and fake secrets, we train a Linear
+Discriminant Analysis (LDA) [48] model to find a combination
+of the four features that maximizes the differentiation between
+FeatRand FeatF. We choose this linear model over complex
+models like Multi-Layer Perceptron (MLP) [49] because our
+feature vector for each token contains only four features, and
+using non-linear models can lead to overfitting issues with
+low-dimensional feature vectors.
+We prioritize the resource-efficient LDA rather than other
+complex models due to the immediacy required in decoding.
+After training on FeatRand FeatF, the resulting combina-
+tion can be used by the scoring model to predict the probability
+hat a feature vector feat belongs to real secrets:
+probR= SM(feat) (1)
+C. Scoring Model Guided Decoding
+Using the scoring model, we guide decoding process of the
+Victim Code LLM, as detailed in Algorithm 1, to enhance the
+likelihood of generating real secrets. The algorithm follows
+the traditional beam search decoding process, with additional
+enhancement steps (highlighted in red) including Masking
+Invalid Tokens (line 6), Extracting Token Features (line 9),
+Calling Scoring Model (line 10), and Combining Probabilities
+(line 11). The last three additional steps constitute the process
+referred to as Scoring Model Guided Probability Re-weighting.
+We first briefly introduce the overall process based on beam
+search and then describe the goals and the details of the
+enhancement steps.
+Overall Beam Search Process. The overall decoding pro-
+cess follows the key steps of beam search:
+• Hypothesis Pool Initialization (line 1). First, the process
+initializes a pool Beam to maintain multiple hypotheses,
+where each hypothesis is a pair of (seq,score), consisting
+of a token sequence seqand a likelihood score score. At the
+beginning, there is only one hypothesis (pmpt,0) in Beam,
+where pmpt is the input prompt.
+• Hypothesis Expansion (lines 5-16). For each hypothesis
+(seq,score) in Beam, it is expanded to B new hypotheses
+which are added to a candidate list Cands. Specifically,
+the process first selects the top B tokens (Toks) from
+the LLM-predicted token probability distribution (lines 7-
+9) and then appends each selected token tok to seq (line
+14), updating the likelihood score score with tok’s log
+probability log(probLM ) (line 15).
+• Hypothesis Ranking and Pruning (lines 17-21). After
+expanding all hypotheses in Beam, there are B times
+new candidate hypotheses in the candidate list Cands. The
+hypotheses are ranked based on their likelihood scores (line
+17), and the top B hypotheses are selected to update the
+hypothesis pool Beam (line 21).
+Final Secret Selection (line 22). These steps are iteratively
+performed until the length limit L of the target secret type
+is reached. After that, the hypothesis with the highest like-
+lihood score in Beam is selected, and the token sequence
+is returned as the final secret.
+Our Enhancements. We outline the goals and details of
+the enhancement steps as follows.
+• Masking Invalid Tokens (line 8). In traditional beam search,
+the LLM predicts the probability distribution p based on
+the existing token sequence seq (line 7), and the next
+step is to select the top B tokens from this distribution
+(line 9). However, in our secret extraction scenario, some
+tokens with unsupported characters are invalid (e.g., “*”),
+as secrets must adhere to specific formats. To address this
+and avoid invalid candidates for the scoring model, we mask
+invalid tokens in p by setting their probabilities to 0 (i.e.
+the MASKINVALIDTOKS procedure), ensuring they are not
+selected in the subsequent step. The specific constraint for
+determining invalid tokens for each secret type is listed as
+a regular expression in Table I.
+• Scoring Model Guided Probability Re-weighting (line 11-
+13). In traditional beam search, each token tok with its
+probability probLM among the top B tokens is used to
+expand a hypothesis (line 14-16). Our scoring model-guided
+decoding re-weights probLM before constructing the new
+hypothesis using the following three steps:
+– Extracting Token Features (line 11). We extract the
+feature vector feat for the token tokusing the EXTRACT-
+FEATS procedure, as outlined in Section IV-A.
+– Calling Scoring Model (line 12). Based on the extracted
+feat, we call the trained scoring model to predict probR
+for tok using Equation 1, indicating the probability that
+the given tok belongs to a real secret under the condition
+that it is selected by LLM.
+– Combining Probabilities (line 13). We combine the
+LLM-predicted probability probLM and the scoring-
+model-predicted probability probR by multiplying them.
+The resulting probability (probw
+LM ×probR) represents a
+conditional likelihood, indicating the chance that tokwill
+complete a real secret when appended to the preceding
+tokens in seq. Note that w, within the interval [0,1], is a
+hyper-parameter used to control the weight of probLM.
+Additional Optimization. Based on C1 from our character-
+ization study, we optimize the beam search process (lines 18-
+20) by retaining all expanded candidate hypotheses (Cands)
+during the first K steps instead of selecting the top B hy-
+potheses. This prevents missing real secrets due to the initially
+low probabilities of early tokens [50]. We set K to 4 based on
+our observations in small-scale experiments and computational
+cost considerations.

@@ -1,0 +1,209 @@
+Figure 2 illustrates the overview of FGIT. This approach
+takes as input an instruction-tuned LLM and its corresponding
+instruction-tuning dataset, and outputs an enhanced LLM with
+improved code generation capabilities that can better discrim-
+inate error-sensitive segments. It first augments the dataset
+by generating similar yet incorrect implementations for each
+correct response. Then, it identifies error-sensitive segments
+between the paired implementations and calculates weights
+for tokens in the correct implementations that differ from the
+incorrect variants. During fine-tuning, it only computes loss
+on the correct implementations, with higher weights assigned
+to tokens in error-sensitive segments, producing an LLM that
+can better discriminate these error-sensitive segments. The
+methodology consists of two key components:
+1) Error-Sensitive Segments Identification: This component
+creates a refined dataset of paired correct and similar
+yet wrong code samples from the original dataset, and
+processes code differences at multiple granularities to
+identify error-sensitive segments.
+2) Dynamic Importance Reweighting: This component
+strategically reweights token weights in the loss function
+to prioritize discriminative elements in correct imple-
+mentations, building upon the identified error-sensitive
+segments. This dynamic weighting method enhances the
+LLM’s attention to the key implementation details in
+correct code, effectively teaching it to distinguish between
+valid solutions and their similar yet incorrect counter-
+parts, ultimately improving code generation capabilities.
+The two components work together to fine-tune LLMs to
+distinguish between correct implementations and similar yet
+incorrect alternatives, thereby improving performance.
+The input to this component is the instruction-tuning
+dataset D = (ccorrect
+i ,ptarget
+i )N
+i=1, where ptarget
+i represents the
+target problem description and ccorrect
+i denotes the correct
+implementation. The output is an enhanced dataset D=
+(ccorrect
+i ,cincorrect
+i ,ptarget
+i )N
+i=1 with error-sensitive segment infor-
+mation, where cincorrect
+i represents the corresponding similar but
+incorrect implementation. To generate incorrect code variants,
+we utilize a teacher LLM with a carefully designed prompt. We
+choose an LLM-based approach over code mutation techniques
+because teacher models, by leveraging error commonalities
+learned from their extensive code corpora, offer better flexi-
+bility in producing a diverse range of incorrect variants. The
+prompt template is shown in Figure 3, which consists of two
+parts. The first part defines the task for producing incorrect
+responses corresponding to the target problem and answer,
+specifying that outputs should be similar to correct solutions,
+with responses constrained to markdown formatting for con-
+sistent post-processing. The second part provides contextual
+references to the target problem description and solution.
+We generate multiple incorrect variants for each correct
+implementation and select the one that is most similar to
+the correct solution. To identify the most similar one, we
+employ an embedding-based approach because embeddings
+can capture semantic similarities that purely lexical compar-
+isons might overlook. Specifically, we generate embeddings
+with UnixCoder [22] for its deep understanding of code
+structures and semantics derived from its diverse, large-scale
+code corpora. We then extract the differences to identify error-
+sensitive segments and process them at different granularity
+levels to capture both line-level and token-level information.
+Specifically, we designate cincorrect as the pre-change version
+and ccorrect as the post-change version.
+Line-Level Differences. We align ccorrect
+i and cincorrect
+i line-by-
+line using Python’s difflib library. For each line, it assigns
+a flag indicating whether it should be deleted (-), added (+),
+or remain unchanged. We extract the lines marked for deletion
+from cincorrect and those marked for addition from ccorrect
+.
+Let Lc and La denote the number of code lines in the correct
+code ccorrect and incorrect code cincorrect, respectively. Based on
+these extracted lines, we construct the line-level boolean mask
+vectors Vc
+line and Va
+line for ccorrect and cincorrect as follows:
+where I(·) is the indicator function that outputs 1 if the
+condition is true and 0 otherwise.
+Token-Level Differences. We utilize the Levenshtein distance
+algorithm [23] to identify character-level change information
+between cincorrect and ccorrect. The Levenshtein distance algo-
+rithm, also known as the edit distance algorithm, quantifies the
+minimum number of single-character operations (insertions,
+deletions, or substitutions) required to transform one string
+into another. We identify the characters that need to be edited
+to transform the original string (cincorrect
+i ) into the modified
+version (ccorrect), and record their positions accordingly. For
+instance, if a character operation is an insertion, we record its
+position in ccorrect, as shown in Figure 2. Given that the LLM’s
+embedding layer is tightly coupled with the LLM’s tokenizer
+vocabulary, we map these character-level differences to tokens
+using the LLM’s tokenizer. When character modifications span
+multiple tokens, all affected tokens are marked.
+Let Tc and Ta denote the number of tokens in ccorrect and
+cincorrect. We construct token-level boolean mask vectors Vc
+token
+and Va
+token for ccorrect and cincorrect as follows:
+Vc
+token = [w
+c
+c
+1,...,w
+Tc ], w
+c
+k = I(tokenc
+k is added)
+Va
+token = [w
+a
+a
+1 ,...,w
+Ta ], w
+a
+ℓ = I(tokena
+ℓ is deleted)
+Hybrid Level Vectors. To create comprehensive representa-
+tions of error-sensitive segments, we combine line-level and
+token-level masks. However, these two types of masks operate
+at different granularities and cannot be directly combined.
+To get line-level masks with token-level granularity, we first
+initialize a new token-level mask vector with all zeros, corre-
+sponding to the total number of tokens in the code. Then,
+for each line in the original code, all tokens belonging to
+that line are assigned the line’s mask value (1 if the line is
+marked, 0 if it is unmarked) in this new token-level mask. This
+process yields the token-level representations Vc
+line-to-token and
+Va
+line-to-token when applied to Vc
+line and Va
+line respectively. We then
+use an element-wise addition operation to combine Vline-to-token
+and Vtoken, as follows:
+These hybrid vectors precisely identify error-sensitive seg-
+ments at multiple granularities, highlighting critical differences
+between correct and incorrect implementations. Noted that
+changed tokens must appear in changed lines, our hybrid
+representation naturally creates a priority system: 1) tokens
+that are both in changed lines and are themselves changed
+will have a value of 2 in the hybrid vector; 2) tokens that
+are only in changed lines but not directly changed will have
+a value of 1. This provides a more comprehensive view than
+either granularity alone, with higher values indicating more
+critical tokens.
+B. Dynamic Importance Reweighting
+With the identified error-sensitive segments, we now refine
+the SFT process to prioritize these critical differences. Based
+on the constructed dataset D= {(ccorrect
+i ,cincorrect
+i ,ptarget
+i )}N
+i=1,
+the standard SFT loss is computed as:
+where N denotes the number of samples in a batch. Notably,
+the standard SFT loss function treats all tokens equally.
+In contrast, FGIT introduces dynamic token-level weights
+W= w1,w2,...,wj emphasize error-sensitive segments:
+The weight W is computed as follows: Given input x= ptarget
+,
+outputs yc = ccorrect and ya = cincorrect, we first obtain the
+LLM’s prediction probabilities for both correct and incorrect
+implementations given the same instruction:
+where fθ represents the conditional probability function of the
+LLM that computes the probability of the next token given the
+input x and previous tokens. We then apply the hybrid-level
+vectors to isolate probabilities for error-sensitive segments:
+Where ⊙denotes element-wise multiplication. Inspired by the
+Bradley–Terry model [24], a pairwise comparison framework
+widely used in ranking systems [25]–[27], we compute dy-
+namic token weights W for differentiating tokens in error-
+sensitive segments:
+where α is a hyperparameter controlling the weight range,
+Hc denotes the mean probability of tokens in error-sensitive
+segments in ccorrect
+i , and Ha represents the corresponding value
+for cincorrect. This formulation ensures that: (1) When the
+mean probabilities Hc and Ha are close (indicating the LLM
+struggles to distinguish the tokens between ccorrect and cincorrect),
+the weights for differentiating tokens in ccorrect approach α,
+thereby maximizing emphasis on error-sensitive segments. (2)
+Conversely, when Hc and Ha diverge significantly (demon-
+strating the LLM can discriminate the differentiating tokens
+in ccorrect and cincorrect), the weights diminish toward α−1,
+reducing emphasis. For tokens shared between ccorrect and
+cincorrect, we assign fixed weights α−1, ensuring the LLM
+maintains baseline attention to shared elements while priori-
+tizing discriminative features. To be noted that this dynamic
+weight W is differentiable, as Hc and Ha are derived from
+the model’s output probabilities for ccorrect and cincorrect within
+the error-sensitive segments. Consequently, through gradient
+updates, the optimization process reinforces ccorrect, also im-
+plicitly steering the model away from generating cincorrect
+.
+This dynamic weighting mechanism guides the LLM to
+focus on challenging discriminative aspects of correct imple-
+mentations, which can improve its code generation capability.

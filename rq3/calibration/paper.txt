@@ -1,0 +1,155 @@
+2.1 Calibration: How to use unreliable outputs from flawed models
+Neural models are probabilistically optimized over the training set. On a distinct test set, they may
+not always produce high-quality results. How then, is one to use these flawed models in practice?
+This question relates to the concept of Calibration.
+For simplicity, let us first consider a neural model that produces a simple binary prediction,
+which is not always correct. Let’s further assume that the prediction is associated with a confidence,
+which is a probability measure (0 <= 𝑝 <= 1). For this prediction to be reliable, we would like the
+output confidence to reliably indicate its empirical rate of correctness; thus whenever the model
+is 60% confident (i.e, output probability is 0.6) then we would like to be correct about 60% of the
+time. If this is the case, the model is said to be well-calibrated; model confidence is a good predictor
+of expected outcomes, and thus helpful in determining the expected value of a decision policy.
+With a well-calibrated weather-forecasting model, e.g, users can respond appropriately to different
+confidence levels: for instance, using a hat at 10% confidence of rain, an umbrella at 50% or above,
+or taking a bus at 80% or above.
+Quantitatively, Calibration is a relation-
+ship (Figure 2) between two quantities: con-
+fidence on the x-axis, typically a probabil-
+ity value, and the rate of correctness (y-axis),
+typically a normalized frequency (values
+∈[0,1]) indicating how often the model is
+empirically correct, when predicting at the
+confidence values along the x-axis. Figure 2
+Fig. 2. Sample of well and poorly calibrated models
+presents two reliability plots [Wilks 1990] to
+show the difference between a well-calibrated model and a poorly calibrated model; in the plot,
+the predicted confidences are binned along the x-axis, over 10 ranges 0−0.1,0.1−0.2,..., and
+the fraction of each bin that is correctly predicted is shown on the y-axis. In a well-calibrated
+model, the observed model correctness rate is well-aligned with the model confidence; for a poorly
+calibrated model, it is not. Clearly, improving calibration is a worthy goal; to do so, we first have to
+measure it.
+2.1.1 Measuring Calibration. A calibration metric measures the alignment of a model’s confidence
+(in its predictions) with the correctness thereof. We now discuss two main measures, Brier score,
+and ECE. Note again, we first consider models with binary outcomes: either the model prediction
+is correct, or it is wrong.
+Brier Score1 is the mean squared difference between the predicted probabilities and the actual
+outcomes; it measures (on average) how well (given a sample) predicted confidence aligns with
+the actual correctness on that sample. A perfectly calibrated model would have a Brier Score of 0,
+indicating that its predicted probabilities match the observed outcomes exactly. Mathematically,
+the Brier Score 𝐵𝑟 for a sample set of 𝑁 predictions is calculated as follows:
+Whereˆ
+𝑝𝑖 is probability (confidence) assigned to the 𝑖𝑡ℎ sample prediction, andˆ
+𝑜𝑖 is the 𝑖𝑡ℎ sample
+outcome (1 for correct, 0 for incorrect). Lower 𝐵𝑟 indicate better calibration, with 0 being perfect
+calibration, with a maximum (worst) possible score of 1. 𝐵𝑟 thus measures the alignment of a
+model’s confidence estimates with the actual rate of empirical correctness.
+Brier scores should always be gauged relative to a base rate. A naïve model, which always outputs
+(as confidence) the empirical base rate 𝑝, (for example, if it rains 10% of the days, the model predicts
+rain with 𝑝= 0.1 confidence every day) will achieve a score called the reference Brier score, 𝐵𝑟𝑒𝑓,
+which analytically is 𝑝(1−𝑝). Thus, if it rains about 10% of the days, the base rate is 0.1; a model
+that always outputs 0.1 as its confidence will score 0.1 ∗0.9 = 0.09 Brier. Evidently, 𝐵𝑟𝑒𝑓 ∈(0,0.25].
+Given the possibility of low Brier scores from actually very “unskilled" naïve models, we need to
+normalize the measured Brier for a given model; we discuss this below, as “skill scores".
+Brier Skill Score is a normalized measure ∈(−∞,1]for assessing the reliability of a model’s
+confidence, relative to a naïve model always just providing the base rate as the confidence, and a
+skill of 𝐵𝑟𝑒𝑓. A better-calibrated model will achieve a Brier Score lower than this unskilled 𝐵𝑟𝑒𝑓
+value; a bad model, could do worse! The Skill Score (SS) quantifies this improvement (or decline)
+compared to the baseline 𝐵𝑟𝑒𝑓, calculated as:
+A positive SS indicates improvement over the baseline, while a negative SS suggests predictions
+worse than the baseline. A perfect skill score is 1.0; but even small positive values of SS can
+sometimes indicate good skill. The German weather forecasting service, Deutsche Wetterdienst, sets
+a minimum threshold of 0.05 for a Skill Score to indicate good forecast quality reference [Wet 2024].
+Another reference point comes from the American data journalism site 538, which reports a skill
+score of approximately 0.13 in forecasting World Cup games [Wezerek 2023].
+However, Brier isn’t the only metric that’s used.
+ECE. (Expected Calibration Error) [Naeini et al. 2015] is another, rather more complex, calibration
+measure. It averages the difference between the predicted confidence and actual correctness rates
+across different confidence levels. Intuitively, on a reliability diagram (such as Figure 2) it amounts to
+measuring the (normalized) area between the diagonal ideal and the actual empirical bars. A lower
+ECE indicates better calibration, meaning the predicted probabilities closely match the actual rates.
+Conversely, a higher ECE indicates poorer calibration, meaning a mismatch between predicted and
+actual rates.
+To compute ECE, we first partition the
+dataset into 𝑛bins 𝐵𝑖,𝑖= 1 ...𝑛based on con-
+fidences (predicted probabilities). For example,
+the bins could range from confidence levels of
+[0-0.1) to [0.9-1.0). For each bin, we calculate the
+average confidence, 𝑐𝑜𝑛𝑓(𝐵𝑖)(predicted prob-
+ability), and empirical accuracy, 𝑎𝑐𝑐(𝐵𝑖)(frac-
+tion of true positives). Following this, we deter-
+mined a weighted difference by (i) computing
+the absolute difference between the average confidence and accuracy in each bin and (ii) weighting
+by the proportion of samples in each bin. Finally, we sum the weighted differences across all bins
+to get the ECE. ECE provides a more nuanced evaluation of calibration across different confidence
+levels compared to metrics like the Brier Score, which aggregates errors across all samples without
+considering confidence levels. This makes ECE particularly useful for understanding how well
+a model’s confidence estimates align with its performance at different confidence levels. Mathe-
+matically, the ECE is calculated in three steps below (Note: 𝐵𝑖 denotes the set of elements in each
+bin;ˆ
+𝑜𝑖 is an indicator varible,= 1 if the prediction is right, and= 0 if wrong;ˆ
+𝑝𝑖 is the confidence
+(probability) associated with the prediction)
+ECE can be intuitive, and visually appealing: but it can mislead, since the binning approach may
+vary. For example, if it usually rains 10 days a year in Los Angeles, a naïve (technically, “unskilled")
+model could always predict rain with a probability of 10
+= 0.0275. Such a model would have a
+365
+single bin with a confidence of 0.0275, and an empirical correctness rate of nearly the same (on a
+yearly basis), yielding a perfect (but misleading) ECE of zero.
+ECE and Brier Score serve slightly different purposes: the Brier Score measures the ability to
+correctly discriminate output categories and the calibration of output probability for each sample,
+while the ECE specifically measures calibration. However, the ECE can be misleadingly low, as
+noted earlier for the unskilled predictor. Additionally, careful binning is necessary as it can impact
+ECE scores.
+Thus far, we have considered calibration with respect to a model with a binary output. What if
+the output is a sequence of tokens, like a code summary? Calibration in this situation is a bit more
+complex, but we still need two notions: confidence, and correctness which are used to calculate Brier
+Skill score, and 𝐸𝐶𝐸. We begin with approaches to evaluate confidence of model-generated code
+summaries, and then turn to correctness.
+2.2 Confidence in a generated summary
+Thus far, our discussion of calibration has focused settings where there is a single, binary prediction,
+with an associated confidence (probability) measure. With generated code summaries, we have a
+sequence of tokens generated from a softmax layer; from this layer, we can sequentially select a
+most likely token, with an associated probability. This would be “greedy" decoding; other methods
+are possible. Whatever method is used, one obtains a generated code summary, which contains a
+sequence of tokens, each with an associated probability. Since calibration measures rely on a single
+confidence associated with an entire output, we need a way to summarize the entire sequence
+of probabilities. The simplest approach is to just take a mean (geometric or arithmetic) of this
+sequence. We discuss further details in the methods section.
+2.3 Correctness of a generated summary
+For a binary prediction (e.g. “Will it rain tomorrow”) the notion of correctness is simple (either it
+rained or didn’t). For a generated sequence of tokens constituting a code summary, what exactly is
+correctness? Exact match? Partial match? Similarity of “meaning”? Fortunately, there has been a
+quite a bit of work on evaluations of code summaries [Haque et al. 2022; Mastropaolo et al. 2024;
+Roy et al. 2021; Shi et al. 2022].
+Prior work emphasizes evaluating code summaries by their similarity to human-written sum-
+maries [Haque et al. 2022; Shi et al. 2022; Stapleton et al. 2020], in conjunction with other metrics
+like SIDE [Mastropaolo et al. 2024]. Human-written summaries capture content actual developers
+deemed useful for program comprehension; similarity to them thus serves as one of multiple signals
+for summary quality. [Hu et al. 2022] conducted a human-subject study to identify the criteria that
+affect practitioners’ judgment of a code summarization technique’s performance. The important
+evaluation criteria include content adequacy, conciseness, fluency, useful information content not
+in code, and similarity to original human-written comments. It should be noted that of the above 5
+criteria, the first 4 could potentially be evaluated using just the source code and generated summary;
+the last requires access to a human-written summary, which is typically not available when one
+is using a LLM to generate code summaries. In this paper, we therefore focus on similarity to
+human-written summary as our “goodness" criteria.
+Researchers have sought the right metrics to measure the similarity of a machine-generated
+summary to a human-produced summary [Haque et al. 2022; Roy et al. 2021; Shi et al. 2022; Stapleton
+et al. 2020]. Metrics such as BLEU [Papineni et al. 2002], ROGUE [Lin 2004], METEOR [Banerjee
+and Lavie 2005] have been used to measure lexical (word n-gram level) similarity; but these have
+been criticized as not being well-aligned to human judgements of similarity in the case of code
+summaries [Stapleton et al. 2020]. [Haque et al. 2022] empirically compared several different
+lexical & semantic metrics of similarity, and found that certain embedding-based metrics such as
+BERTScore are better-correlated with human evaluations of summary similarity (to a reference)
+than purely lexical measures. They report that SentenceBERT has the highest correlation with
+human evaluations of summary similarity.
+We re-analyzed all the data & metrics used by [Haque et al. 2022], from a somewhat different,
+binary decision perspective: Can we reliably predict sufficient similarity, of a model-generated
+summary? For our perspective we found that both BERTScore and SentenceBERT could be useful.
+Note that in our setting, we seek to predict sufficiently high semantic similarity (above a threshold
+value, as discussed in subsection 4.4) of a generated summary, without knowing the Gold (human-
+generated) summary. We would like to generate a well-calibrated confidence signal (associated
+with the generated summary) that is a reliable indicator of the empirical likelihood of sufficient
+semantic similarity between generated summary and the gold summary (were it available) being
+high enough. Our re-analysis of the Haque et al data is discussed in methods section, § 4.4.

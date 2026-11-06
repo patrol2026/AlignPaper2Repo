@@ -1,0 +1,264 @@
+To identify the discussions that contain a question, we uti-
+lized GPT-3.5 Turbo due to its renowned natural language
+processing capabilities [13], [21]. To determine how GPT
+performs in our case, we first performed a sample analysis.
+1) Classify Sample Discussions using GPT: We applied the
+filters from Section III-B2 and classified the remaining 331
+sample discussions using the prompt specified in Figure 4.
+We added the 2nd and 4th paragraph in the system prompt to
+decrease the number of false-negatives (GPT chooses “no”, our
+agreed class is “yes”) and false-positives (GPT chooses “yes”,
+our agreed class is “no”) respectively. For each discussion,
+we replaced the <title of the discussion> from the
+user prompt with the title of the discussion and <content
+of the post> with the content of the post. We executed
+the gpt-3.5-turbo-0125 classifier three times for each
+discussion with the prompt with a temperature of 1, and
+considered the majority class (“yes” or “no”) as the final class.
+2) Evaluate Performance of GPT as Classifier: We evalu-
+ated GPT’s ability to identify if a post contains questions. Two
+authors manually reviewed the 331 discussions individually
+and labeled them as containing a question or not to prepare
+the ground truth. They achieved a high Cohen’s Kappa co-
+efficient of 0.94. The labelling disagreements were resolved
+through discussion and consensus. For 4 discussions, where
+disagreements could not be resolved, the third author acted as
+a tiebreaker. GPT-3.5 Turbo achieved a high accuracy of
+94% and a high F1 score of 95%, demonstrating its robustness
+and reliability in distinguishing posts with questions.
+We used GPT-3.5 Turbo to classify all 15,964 discus-
+sions that passed the cleaning filters. We encountered errors
+classifying 15 discussions due to their long token length or to
+having many repetitive letters or symbols like’ or \n in the
+discussions, which we excluded from our analysis. We ended
+up with a total of 11,278 discussions that contained questions.
+Our collected data and analysis are available in our replication
+package [52].
+IV. RQ1: HOW MUCH EFFORT IS SPENT ON HANDLING
+QUESTIONS?
+Motivation: The increasing use of HF models has led to an
+increasing number of model community discussions. This re-
+search question aims to assess the effort invested in responding
+to questions to better understand the time commitment invested
+by HF model community members.
+Approach: We measure the effort spent on handling ques-
+tions in terms of (1) the number of responses to each question,
+(2) the length of the responses, (3) the number of unique
+participants in each discussion and (4) the time between
+posting the question and receiving the first response.
+e used the Mann-Whitney U Test [33] to compare the dis-
+tributions of the number of responses per discussion based on
+(1) discussion status and (2) responses from model providers.
+The Mann-Whitney U Test is a non-parametric statistical test
+used to check if two non-normal distributions differ. A p-
+value below 0.05 indicates a significant difference between
+the distributions. We calculated the effect size of the statistical
+difference between the distributions using Cliff’s Delta to mea-
+sure the magnitude of the difference. We used the thresholds
+proposed by Romano et al. [44] to interpret the delta value d:
+negligible if |d|≤0.147; small if 0.147 <|d|≤0.33; medium
+if 0.33 <|d|≤0.474; and large if 0.474 <|d|≤1.
+Findings: Among the 11,278 discussions containing ques-
+tions, 7,782 discussions have at least one response. A discus-
+sion with a question gets a median of one response. Figure 5
+shows that the number of responses per discussion ranges
+from 0 to 91. With a Mann-Whitney U Test, we found that
+the distribution of the number of responses varies noticeably
+(with a small effect size of−0.33) based on the discussion
+status, meaning that open discussions have fewer responses
+than closed discussions. From Figure 6, we see that open
+discussions receive a median of one response, whereas, closed
+discussions receive a median of two responses. We notice
+that open discussions are left unanswered or contain fewer
+responses compared to closed discussions.
+Responses to discussions containing questions have a
+median length of 24 words. Figure 7 shows that the length of
+responses varies from 0 to 20,216 words (which were mostly
+made up by the contents of error log that was included in the
+response). From Figure 8, we see that responses for closed
+discussions are longer than open discussions. Open discussions
+receive responses that are a median of 14 words long, while
+closed discussions receive responses that are a median of 45
+words long.
+A discussion with a question has a median of two
+participants, the questioner and another person. The num-
+ber of participants in discussions ranges from 1 to 54, as
+shown in Figure 9. A Mann-Whitney U Test shows that the
+number of responses varies significantly with a large effect
+size of 0.63 based on the participation of model providers in
+discussions.Figure 10 shows that discussions with at least one
+response from a model provider receive a median of two re-
+sponses, while those without typically get none. Additionally,
+Figure 11 shows that discussions are much more likely to be
+closed with a model provider’s participation. The number of
+responses and status of the discussions with a model provider’s
+participation suggest that the questions require specialized
+knowledge about the model to answer.
+A median discussion containing a question gets a re-
+sponse on the same day. The response delay ranges from 0
+to 453 days. Among the 7,782 discussions that got a response,
+4,820 were responded to within 24 hours, making up 42.7%
+of the total question-containing discussions. However, many
+open discussions did not receive a response at all. Among
+the 3,496 discussions that did not get a response, 3,252 are
+open discussions, making up 28.8% of the total question-
+containing discussions, of which 3,236 have been open for
+more than 24 hours.
+Questions are typically handled by model providers and
+responses are typically short. If a question does not get
+a response within 24 hours, it is unlikely to ever get a
+response. 71.9% of the question-containing discussions are
+open, of which, 40.1% are open without any response.
+V. RQ2: WHAT ARE THE HIGH-LEVEL TOPICS OF
+QUESTIONS CONTAINING DISCUSSIONS?
+Motivation: To understand the types of questions users
+ask about models, this research question identifies the high-
+level topics of the posts. We use automated topic analysis to
+investigate whether it is possible to address the questions in the
+model documentation from a high level. Knowing prevalent
+discussion topics enables model providers to organize the
+documentation accordingly.
+Approach: The goal of this research question is to deter-
+mine whether the questions relate to topics that could be
+included in the model card. Therefore, we categorize all the
+questions based on their topic. We use BERTopic [31], a
+topic modelling technique, to identify topics in the studied
+discussions. BERTopic has recently been gaining attention to
+identify discussion topics [2], [17], [20], [16], [47], [54], [12].
+It provides more meaningful and diverse topics than other
+popular techniques like Latent Dirichlet Allocation (LDA),
+Latent Semantic Analysis (LSA) or Top2Vec [17], [18], [48],
+[42].
+We prepared the discussion posts that contained questions
+for topic analysis by removing unnecessary elements such
+as code blocks, images, emojis, and URLs, which do not
+help BERTopic understand the content. Since the BERTopic
+documentation does not recommend any data preprocessing,
+we did not further process the discussions. BERTopic consists
+of five steps: embedding, dimensionality reduction, clustering,
+tokenization, and weighting. Each step is modular and can use
+different algorithms. Following BERTopic’s best practices8, we
+used SentenceTransformer for embedding, UMAP for dimen-
+sionality reduction, HDBSCAN for clustering, CountVector-
+izer for tokenization, and c-TF-IDF for topic representation.
+We also used GPT-3.5 Turbo to assist in labelling the
+topics with short, representative names based on a prompt
+template from the BERTopic documentation. One author fur-
+ther went through the representative documents of the topics
+(which are automatically selected by BERTopic) manually
+to fine-tune the labels. The author used the GPT-generated
+labels as a guide and adjusted the labels based on their own
+observations of the topic keywords and representative posts.
+By setting BERTopic to cluster a minimum of 60 posts per
+topic, we identified 31 meaningful topics and one outlier topic.
+This threshold of 60 posts per topic was defined empirically
+through trial and error to produce a meaningful output. We
+further grouped similar topics to simplify the analysis and
+clarify the main areas of interest. We used Hierarchical Topic
+Modeling9 with BERTopic allowing topics with a distance of
+less than 1 to merge, condensing the 31 initial topics into 5
+clusters. The distance among topics and a visualization of how
+they were grouped into clusters are available in our replication
+package [52]. We labelled the clusters similar to how we
+labelled the topics.
+Findings: We identified 5 clusters containing 31 topics
+from posts with questions. Table I lists these clusters with
+their topics along with the number of posts in each topic, a
+short label for each topic and their top 10 keywords. Here, we
+briefly describe each cluster based on its topics’ representative
+documents and keywords.
+Cluster 1: Challenges with Model Setup and Optimization
+(2,019 questions) The issues discussed in this cluster cover
+various aspects of setting up and optimizing models. Users
+are mainly concerned with the context length and maximum
+input capacity of the model, as well as the tokenizer files like
+tokenizer.json or tokenizer config.json. Another major focus is
+questions about different natural language support by models.
+The cluster also contains questions about prompt templates
+and composition of prompts. Finally, the discussions highlight
+performance challenges, such as slow inference times, and
+issues with transcribing and processing audio files. We believe
+the common questions on topics like maximum context length,
+tokenizer files, multilingual support, prompt template format-
+ting and performance challenges can be addressed in the model
+documentation to provide users with a comprehensive guide.
+Some discussions also focus on the analysis of the model’s
+behaviour with Not Safe For Work (NSFW) contents.
+Cluster 2: Errors and Issues with Model Loading, Usage
+and Deployment (1,687 questions) The posts in this cluster
+focus on issues related to loading, using, and deploying models
+across different environments like HF Transformers, local ma-
+chines and cloud platforms (e.g. AWS SageMaker). Common
+problems include setup errors, missing dependencies, memory
+and VRAM limitations, GPU compatibility issues, and API
+errors during inference. There are also issues with loading
+models through web interfaces (e.g. oobabooga). The cluster
+shows the technical challenges and troubleshooting needed
+for model use in various environments and suggests that
+comprehensive documentation could help resolve some of the
+issues.
+Cluster 3: Seeking Assistance with Model Usage (1,503
+questions) This cluster covers details on requesting and pro-
+viding guidance on the usage of the models. Some posts
+provide guides on training and optimizing Stable Diffusion,
+an AI model for generating images. There are also requests
+for assistance on topics like license details for commercial
+use, model download errors, and using and citing the model.
+Additionally, users request help converting and exporting the
+model to ONNX format. The requests for help on model usage
+scenarios indicate a need for more detailed documentation and
+support resources for users to effectively utilize the models.
+Cluster 4: Questions about Model Training, Evaluation and
+Fine-Tuning (1,226 questions) The posts in this cluster discuss
+various challenges and techniques related to the training and
+fine-tuning of the models. Several posts inquire about the
+datasets used for training and evaluating models, including
+requests for dataset descriptions and evaluation scores. Other
+documents focus on fine-tuning the models to suit unique
+use cases or incorporate new datasets. Furthermore, there are
+queries concerning the sharing and interpretation of training
+codes and results, particularly the hyperparameters and evalu-
+ation methods employed. Finally, there are technical questions
+regarding issues encountered during fine-tuning. The questions
+in this cluster highlight user interest in more details on the
+dataset and code used for model training and evaluation, as
+well as fine-tuning the model for their own use cases.
+Cluster 5: Updates and Requests for Model Versions (1,053
+questions) This cluster predominantly discusses users’ ques-
+tions about future plans, specific model merges, and com-
+parisons among similar models. Users are requesting various
+versions of the models, particularly in the GGUF format,
+a binary file format for quantized models, highlighting the
+need for specific versions to overcome hardware limitations.
+Users also ask for a model variant with a different number
+of model parameters, indicating the need for more parameters
+for a better-performing model and fewer parameters for lower
+computation resources. There are also questions about the
+differences between the two models, indicating a clear need to
+better distinguish between models. We also find discussions on
+Mistral-7B, a large language model created by the AI research
+company Mistral, indicating a high user interest in the model.
+VI. RQ3: WHICH QUESTIONS COULD BE ANSWERED
+USING A STANDARD MODEL CARD TEMPLATE?
+Motivation: With the increasing number of questions posted
+in HF discussions, one way to reduce the time model providers
+spend answering questions and to give answers faster is to
+integrate common questions’ answers into the model docu-
+mentation. In this research question, we identify whether the
+current industry standard template of a model card can answer
+the questions asked. By mapping questions from discussions to
+the standard model card template, we aim to identify (1) how
+useful it would be for model providers to follow the template
+and (2) improvements to the template.
+Approach: A model card is part of a model’s documentation
+that serves the purpose of providing detailed information about
+the models to facilitate user understanding and increase the
+transparency of the model to its stakeholders [5], [15], [34].
+Many recent studies [8], [37], [27], [36] use the model card
+template of Mitchell et al. [34] as a standard. Therefore, we
+also adopt this template. The model card template includes
+9 sections: Model Details, Intended Use, Factors, Metrics,
+Evaluation Data, Quantitative Results, Ethical Considerations,
+Broader Impacts, and Caveats. Some sections contain subsec-
+tions to describe specific details of the section, having a total
+of 27 subsections for a model card.

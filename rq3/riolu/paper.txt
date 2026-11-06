@@ -1,0 +1,245 @@
+The input of RIOLU is a two-dimensional table with random
+numbers of columns and rows. The structure of each column is
+undefined: for example, they can be names, IDs, or URLs. The
+goal of RIOLU is to automatically derive the patterns (e.g.,
+YYYY-MM-DD) of each column without prior knowledge;
+the patterns can then be used to detect data anomalies (e.g.,
+invalid URLs). As shown in Fig 1, the approach of RIOLU
+for determining patterns and detecting anomalies in a column
+can be decomposed into the following steps:
+• Column Sampling: Sample a subset of data from the
+column to generate the patterns.
+• Coverage Rate (rcov ) Estimation: Estimate the percentage
+of healthy values (rcov ) in each column.
+• Constrained Template Generation: Generate raw tem-
+plates for each record with a granularity constraint.
+• Pattern Generation: Generate pattern constraints for each
+template according to the coverage rate.
+• Pattern Selection: Select patterns based on some heuristics
+(e.g., their generalizability).
+As shown in Fig 1, all five steps are needed for the anomaly
+detection task. On the other hand, the data profiling task only
+involves the steps of column sampling, constrained template
+generation, and pattern generation, as all data are assumed to
+be healthy for this task (i.e., rcov is constantly 1). Estimating
+the portion of healthy data (i.e., rcov ) is an essential process in
+generating patterns for anomaly detection, as healthy patterns
+should only be learned from healthy data. Since automated
+coverage rate estimation depends on template generation,
+pattern generation, and pattern selection, we introduce this step
+after explaining the other three steps.
+B. Column Sampling
+Typically, a data column (e.g., a column about dates) only
+covers a subset of the entire data domain (all possible values of
+dates) that may come through the data pipeline. Ideally, high-
+quality patterns should not only cover all the samples in the
+available data that can be seen during the pattern generation
+process, but also be able to generalize to unseen future data
+[17]. Therefore, we use a subset from the column as the
+pattern generation subset and use the whole data column for
+generalizability evaluation and pattern selection. To ensure the
+representativeness of the sample and the pattern generation
+efficiency, we use a sample size Ntr which is calculated using
+a z-score with a confidence level of 95% and an error margin
+C. Constrained Template Generation
+Template generation without constraints may result in an
+over-abundance of templates. Indeed, the basic structure of
+patterns can be captured by raw templates that contain TO-
+KENs and delimiters. We could finely split all records using
+all of their symbol strings (i.e., symbols containing no tokens
+within, such as “++” in Fig. 2) as delimiters. However,
+overly fine-grained splitting of the records may result in
+under-generalization, a problem in anomaly detection [31]. To
+prevent under-generalization, we establish an exact matching
+rate rEM to control the granularity of raw templates. rEM
+controls the portion of records that need to be fully split, thus
+determining the required maximum number of delimiters and
+the granularity of raw templates. As illustrated in the right part
+of Fig 2, fully splitting all records (i.e., rEM = 1) results in
+the last two templates matching only one record. The scattered
+raw template distributions may cause the generated patterns to
+have low frequency, leading to a biased result in the pattern
+selection step (see Section III-E).
+Constrained template generation aims to convert records
+to raw templates under the constraint of rEM . For the data
+profiling task, rEM is fixed to 1, as we aim to capture all
+template structures and do not require pattern selection. For
+data anomaly detection, we should only obtain templates for
+the exact matching of the healthy data. Hence, we set the
+exact matching rate with the same value as the estimated
+coverage rate (i.e., the estimated percentage of healthy data,
+see III-F): rEM = rcov , with the intuition that all the healthy
+data would have exact template matching. Fig 2 is an example
+of a datetime column with five records from a sampled set
+(Ntr = 5). First, we calculate the number of records to be
+fully split using rEM . The number shall be calculated with
+Ntr ∗rEM and rounded to an integer. In our example, when
+setting rEM to 1, we should fully split all five samples;
+when rEM = 0.8, four samples are to be fully split. When
+rEM <1, we determine the samples to be fully split using the
+number of delimiters they contain. According to the minimum
+description length principle [34], we capture the minimum
+number of needed delimiters to fulfill the rEM constraint.
+The numbers of delimiters in the example are {4,6,4,4,5}.
+Hence, when rEM = 0.8, we accept five as the maximum
+number of acceptable delimiters, as it is the minimum number
+of delimiters required to fully split four samples.
+After determining the maximum number of acceptable de-
+limiters, we generate raw templates by iterating through all the
+records. For records containing less or equal to the maximum
+number of delimiters, we fully split them and take all their
+symbol strings as delimiters. Otherwise, we stop splitting
+when the maximum value is reached. Under the setting of
+rEM = 0.8, the second record contains six delimiters and will
+be split as “T-T-T:T:T T” (i.e., matching the template of the
+last record). The portion “T++T” in the raw template is merged
+as a “T” after reaching the maximum delimiter number.
+D. Pattern Generation
+Each record is matched to a raw template after the con-
+strained template generation stage. We further elaborate on the
+content constraints and form patterns based on the templates.
+Raman et al. [26] use token range and token length to
+constrain the tokens. Instead of using the tokens, Ilyas et
+al. [27] split the tokens into characters and discuss whether
+the character slot contains specific static characters or covers
+one or more character type. Inspired by these approaches, we
+consider these four types of constraints for pattern generation:
+token range, token length, static character, and character type.
+We use a waterfall structure to infer the constraints at the
+four layers, with an order from stricter to looser: 1) token
+range determination, 2) token length determination, 3) static
+character determination, and 4) static type determination. The
+intuition is simple: if a token has a stricter constraint (e.g.,
+with a token range constraint: being either “AM” or “PM”),
+then we do not need to infer the looser constraints (e.g., then
+token length or character-level constraints). We iterate records
+in the sampled set to collect all the contents on the four layers
+and select content constraints using rcov as a threshold. We use
+Fig 3 as a running example and assume rcov = rEM = 0.8.
+Content Collection. Fig 3 illustrates five date time records
+that match with a template “T-T-T:T:T”. Each token in the
+template is matched to a string in the records. For example, the
+first “T” in the first record corresponds to “2011”. Following
+this method, we collect the contents of each token from the
+five examples, as shown in the “Tokens” frame. These contents
+are used for token range and token length constraint inference.
+The tokens can be further decomposed into character slots
+for static character and character type inference. In Fig 3,
+we decompose the third token as an example. The character
+collection is similar to token content collection: we iterate
+through the tokens and fit their contents into the corresponding
+slot position, as shown in the “Character Slots for T3” frame.
+Constraint Inference. When selecting content constraints,
+Auto-Validate [17] aims to find patterns that capture most of
+the values under a small tolerance value θ (e.g., 1%, 5%)
+for anomalies in the training set. However, we argue that
+using a constant predefined θ is hardly precise. Instead, the
+value should be adjusted based on the specific error rate of
+each dataset. Therefore, we estimate the percentage of healthy
+values rcov to guide the constraint selection stage for the
+anomaly detection task. As mentioned in Sec III-A, for data
+profiling, the coverage rate is 1, given that the goal is to
+describe all data fully.
+1) Token Range Determination: Constant token contents
+(e.g., “AM” or “PM”) are highly frequent [23]. We use a
+two-class K-Means clustering technique to cluster the token
+values based on their frequency. We choose K-Means due to
+its efficiency and wide use for data clustering. The frequency
+range that can be reached by a token is: [ 1
+Ntr ,1]. To ensure
+that two clusters (i.e., the high and low-frequency cluster) can
+always be created, we manually insert 1 and 1
+into the
+Ntr
+frequency list. The frequencies in the high-frequency cluster
+are then summed to compare with the coverage rate rcov : if
+the sum is larger than rcov , then the high-frequency values are
+making an adequate match, and thus a token range is found.
+Otherwise, we shall further determine whether the token has
+a length constraint. In our date time example, the template
+contains five tokens. As shown in Fig 3, all the values for
+T4 and T5 share the value of “00”: the token value “00” has
+a frequency of 1. Hence, a token range is assigned to these
+two tokens. Conversely, T1, T2, and T3 do not have any token
+range since each token value has a frequency of 0.2, and is
+clustered with 1
+6 ≈0.167 (i.e., the low-frequency cluster).
+2) Token Length Determination: While a specific content
+range may not be applicable for a token, the token may have
+a limitation to the length. A static length len for a token
+is determined if and only if most token contents have a
+fixed length; if the system fails to detect a static length for
+the current token, the minimum token length is captured as
+lenM in. In our running example in Fig 3, we should detect
+token length constraints for T1, T2, and T3. All the contents
+for T1 and T2 are in a fixed length, while T3 contains four
+(80%) 5-character contents and one (20%) 4-character content.
+Under the setting of rcov = 0.8, we determine that T3 also has
+a token length constraint since 80% of the contents satisfy the
+constraint of having 5 character slots.
+3) Static Character Determination: We use K-Means clus-
+tering based on frequencies to determine static characters in
+the pattern, similar to the strategy for token range determina-
+tion. The frequencies are calculated by counting the existence
+frequency for a character on a certain slot (e.g., for the first
+character slot in T3, the frequency of “0” is 0.6 while the
+frequency for “1” is 0.4). We also insert 1 and 1
+into
+Ntr
+the frequency list to ensure the split. For static length tokens
+(i.e., with len), we detect static character ranges for all len
+characters; for tokens without static length constraints, we
+detect static character ranges for the first lenM in characters.
+We decompose T3 in Fig 3 to demonstrate the approach. The
+constant length constraint is 5 for this token. According to the
+collected character in the “Character Slots for T3” frame, the
+last three slots have static characters, but no static character
+is detected for the first two slots.
+4) Static Type Determination: Characters are usually cat-
+egorized into upper/lower letters, digits, and symbols. Static
+type is to be detected if and only if when a range of static
+characters (i.e., a stricter constraint) fails to be determined. For
+each character slot, the character types are ranked according to
+their frequencies from high to low, and the types are selected
+until their cumulative frequency exceeds rcov (i.e., the types
+cover the majority of the space). If all types appear in the
+majority of current character slot, the slot would have no
+constraint. Following the intuition in static character determi-
+nation, for static length tokens, the type constraint applies to
+all lencharacters; for tokens without static length constraints,
+we detect character types for the first lenM in characters. For
+the example token T3 in Fig 3, since the first two slots in T3
+do not have static characters, we check their static character
+type. Both slots have a static type of digits, written as “\d”.
+5) Pattern Composition: After constraints on the four lay-
+ers are detected, we compose them into a pattern. For tokens
+with token range constraints, we directly replace the token
+using the range (e.g., the last two tokens in Fig 3 are replaced
+by “00”). Otherwise, we write the regular expression for the
+token using detected constraints. Take T3 as an example: using
+the “\d” constraints for the first two character slots and the
+“T00” constraints for the last three slots, the regular expression
+for T3 is “\d{2}T00”. Following this procedure, a pattern is
+generated as illustrated in the “Final Pattern” frame in Fig 3.
+E. Pattern Selection
+A pool of candidate patterns is constructed after the pattern-
+generation step. However, not all patterns are considered as
+healthy patterns. As shown in Fig 1, we further perform pattern
+selection for the data anomaly detection task. Similar to Padhi
+et al. [23], we consider patterns with low matching rates on
+the dataset as anomalies. For each pattern pi, its matching rate
+(i.e., frequency) on the whole dataset is calculated through the
+number of records matched using regex. We then apply K
+Means clustering to split the patterns into two clusters based
+on their matching rate automatically [35]: the high-frequency
+and low-frequency clusters. The clustering technique could
+avoid the domain-dependent threshold determination problem
+raised in Sec II-C. We assume that at least one pattern shall be
+accepted for the corresponding column. Thus, we insert a low
+matching rate noise (i.e., 1
+N ) to ensure a low-frequency cluster
+is created. Patterns labeled as high-frequency are selected as
+healthy patterns, whereas those labeled as low-frequency are
+not further used. Finally, the healthy patterns are used to detect
+anomalous records in the column: records that do not match
+any healthy pattern are identified as anomalies.
